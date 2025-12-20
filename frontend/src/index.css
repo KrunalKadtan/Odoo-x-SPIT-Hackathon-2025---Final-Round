@@ -1,68 +1,31 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Core Backgrounds */
+  --color-bg-primary: #FAF9F6;      /* Premium Alabaster */
+  --color-bg-secondary: #F2F2F2;    /* Soft UI Elements */
+  --color-surface: #FFFFFF;         /* Card & Modal backgrounds */
+  
+  /* Text Colors */
+  --color-text-main: #1A1A1A;       /* High-contrast soft black */
+  --color-text-muted: #666666;      /* De-emphasized text */
+  
+  /* Brand & Actions */
+  --color-accent: #8B6212;          /* Yarrow Gold (Premium CTA) */
+  --color-accent-soft: #C4C5BA;     /* Sage (Secondary CTA) */
+  --color-border: #E0E0E0;          /* Hairline borders */
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+[data-theme='dark'] {
+  --color-bg-primary: #121212;      /* Deep Charcoal */
+  --color-bg-secondary: #1E1E1E;    /* Dark Surface */
+  --color-surface: #252525;
+  --color-text-main: #E4E4E4;       /* Cloud White */
+  --color-text-muted: #A0A0A0;
+  --color-accent: #D4AF37;          /* Lighter Metallic Gold */
+  --color-accent-soft: #4A4B45;     /* Deep Olive */
+  --color-border: #333333;
 }
