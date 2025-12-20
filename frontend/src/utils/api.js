@@ -49,6 +49,7 @@ api.interceptors.response.use(
         // Refresh failed, redirect to login
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_data');
         window.location.href = '/signin';
       }
     }
@@ -62,12 +63,39 @@ export const authAPI = {
   // Sign up
   signup: async (userData) => {
     const response = await api.post('/accounts/signup/', userData);
+    
+    // Store user data for navigation component
+    if (response.data.user) {
+      localStorage.setItem('user_data', JSON.stringify(response.data.user));
+    }
+    
     return response.data;
   },
 
   // Sign in
   signin: async (credentials) => {
     const response = await api.post('/token/', credentials);
+    
+    // Get user profile after successful login
+    try {
+      const profileResponse = await api.get('/accounts/profile/', {
+        headers: {
+          Authorization: `Bearer ${response.data.access}`
+        }
+      });
+      
+      // Store user data
+      localStorage.setItem('user_data', JSON.stringify(profileResponse.data));
+    } catch (profileError) {
+      console.warn('Could not fetch user profile:', profileError);
+      // Store basic user info from token if profile fetch fails
+      const userData = {
+        email: credentials.email,
+        name: credentials.email.split('@')[0] // fallback name
+      };
+      localStorage.setItem('user_data', JSON.stringify(userData));
+    }
+    
     return response.data;
   },
 
@@ -96,6 +124,7 @@ export const tokenUtils = {
   clearTokens: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_data');
   },
 
   isAuthenticated: () => {

@@ -5,7 +5,9 @@ import SignUp from './pages/SignUp';
 import SignIn from './pages/SignIn';
 import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
-import TestPage from './TestPage';
+import Home from './pages/Home';
+import Shop from './pages/Shop';
+import MyAccount from './pages/MyAccount';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -21,10 +23,12 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Test route */}
-        <Route path="/test" element={<TestPage />} />
-        
         {/* Public routes */}
+        <Route path="/" element={<Home />} />
+        <Route path="/shop" element={<Shop />} />
+        <Route path="/shop/:category" element={<Shop />} />
+        <Route path="/shop/:category/:productId" element={<Shop />} />
+        
         <Route 
           path="/signin" 
           element={
@@ -52,21 +56,19 @@ function App() {
         
         {/* Protected routes */}
         <Route 
+          path="/my-account" 
+          element={
+            <ProtectedRoute>
+              <MyAccount />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
           path="/dashboard" 
           element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
-          } 
-        />
-        
-        {/* Default redirect */}
-        <Route 
-          path="/" 
-          element={
-            tokenUtils.isAuthenticated() ? 
-              <Navigate to="/dashboard" /> : 
-              <Navigate to="/signin" />
           } 
         />
         
