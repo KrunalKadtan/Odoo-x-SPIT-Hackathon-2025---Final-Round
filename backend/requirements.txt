@@ -5,6 +5,9 @@ djangorestframework-simplejwt>=5.3,<6.0
 python-decouple>=3.8,<4.0
 django-cors-headers>=4.3,<5.0
 
+# Payment gateway integration
+razorpay>=1.3.0  # Razorpay payment gateway SDK for order creation and verification
+
 # Testing dependencies
 pytest>=7.4,<8.0
 pytest-django>=4.5,<5.0

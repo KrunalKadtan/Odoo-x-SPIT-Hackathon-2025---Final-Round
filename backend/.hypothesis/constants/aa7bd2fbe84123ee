@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\project-aarav\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\services.py
+# hypothesis_version: 6.148.7
+
+['%A', '0.00', '0.01', '100.00', 'Coupon has expired.', 'Coupon is valid.', 'active', 'confirmed', 'decrease', 'discount_offer', 'draft', 'increase', 'line_total', 'portal', 'product_id', 'quantity', 'unit_price']

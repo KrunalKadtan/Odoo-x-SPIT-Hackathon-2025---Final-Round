@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator, RegexVa
 from django.core.exceptions import ValidationError
 from django.conf import settings
 import datetime
+from decimal import Decimal
 
 class Product(models.Model):
     id = models.BigAutoField(primary_key=True)  # BigSerial is handled by BigAutoField
@@ -412,3 +413,463 @@ class Coupon(models.Model):
     def is_usable(self):
         """Check if coupon can be used (active and not expired)."""
         return self.status == 'active' and not self.is_expired()
+
+
+class SaleOrder(models.Model):
+    """
+    Sales order header containing customer information and order totals.
+    All monetary calculations are performed server-side.
+    """
+    
+    # Status choices
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('confirmed', 'Confirmed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    # Primary key
+    id = models.BigAutoField(primary_key=True)
+    
+    # Customer relationship
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='orders',
+        db_index=True,
+        help_text="Customer who placed the order (must be portal user)"
+    )
+    
+    # Order details
+    order_date = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="Date and time when order was created"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='draft',
+        db_index=True,
+        help_text="Current status of the order"
+    )
+    
+    # Monetary fields (calculated server-side)
+    subtotal = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Sum of all line item totals"
+    )
+    
+    discount_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Discount amount from applied coupon"
+    )
+    
+    total_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Final total after discount"
+    )
+    
+    # Coupon relationship
+    applied_coupon = models.ForeignKey(
+        'Coupon',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='orders',
+        help_text="Coupon applied to this order"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'sale_orders'
+        verbose_name = 'Sale Order'
+        verbose_name_plural = 'Sale Orders'
+        ordering = ['-order_date']
+        indexes = [
+            models.Index(fields=['customer'], name='sale_order_customer_idx'),
+            models.Index(fields=['order_date'], name='sale_order_date_idx'),
+            models.Index(fields=['status'], name='sale_order_status_idx'),
+        ]
+    
+    def clean(self):
+        """Validate model fields before saving."""
+        super().clean()
+        
+        # Validate customer is a portal user
+        if self.customer and self.customer.role != 'portal':
+            raise ValidationError({
+                'customer': 'Customer must be a portal user, not internal staff.'
+            })
+    
+    def save(self, *args, **kwargs):
+        """Override save to call clean()."""
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Order #{self.id} - {self.customer.email}"
+    
+    def can_transition_to(self, new_status):
+        """
+        Check if status transition is valid.
+        Valid transitions:
+        - draft -> confirmed
+        - draft -> cancelled
+        - confirmed -> cancelled
+        """
+        valid_transitions = {
+            'draft': ['confirmed', 'cancelled'],
+            'confirmed': ['cancelled'],
+            'cancelled': [],  # Terminal state
+        }
+        return new_status in valid_transitions.get(self.status, [])
+    
+    def confirm(self):
+        """Transition order to confirmed status."""
+        if not self.can_transition_to('confirmed'):
+            raise ValidationError(f"Cannot confirm order in {self.status} status")
+        self.status = 'confirmed'
+        self.save()
+    
+    def cancel(self):
+        """Transition order to cancelled status."""
+        if not self.can_transition_to('cancelled'):
+            raise ValidationError(f"Cannot cancel order in {self.status} status")
+        self.status = 'cancelled'
+        self.save()
+
+
+class SaleOrderLine(models.Model):
+    """
+    Individual line item within a sales order.
+    Represents a product, quantity, and calculated totals.
+    """
+    
+    # Primary key
+    id = models.BigAutoField(primary_key=True)
+    
+    # Order relationship (CASCADE delete)
+    order = models.ForeignKey(
+        SaleOrder,
+        on_delete=models.CASCADE,
+        related_name='lines',
+        db_index=True,
+        help_text="Parent sale order"
+    )
+    
+    # Product relationship (PROTECT delete)
+    product = models.ForeignKey(
+        'Product',
+        on_delete=models.PROTECT,
+        related_name='order_lines',
+        db_index=True,
+        help_text="Product being ordered"
+    )
+    
+    # Quantity
+    quantity = models.IntegerField(
+        validators=[MinValueValidator(1)],
+        help_text="Quantity ordered (must be positive)"
+    )
+    
+    # Pricing (captured at order time)
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Unit price at time of order (from Product.sales_price)"
+    )
+    
+    line_total = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Line total (quantity * unit_price)"
+    )
+    
+    class Meta:
+        db_table = 'sale_order_lines'
+        verbose_name = 'Sale Order Line'
+        verbose_name_plural = 'Sale Order Lines'
+        ordering = ['id']
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(quantity__gt=0),
+                name='valid_line_quantity'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['order'], name='sale_line_order_idx'),
+            models.Index(fields=['product'], name='sale_line_product_idx'),
+        ]
+    
+    def __str__(self):
+        return f"Order #{self.order.id} - {self.product.product_name} x {self.quantity}"
+    
+    def calculate_line_total(self):
+        """Calculate line total from quantity and unit price."""
+        return Decimal(str(self.quantity)) * self.unit_price
+
+
+class CustomerInvoice(models.Model):
+    """
+    Customer invoice generated from a confirmed sales order.
+    Supports confirmation with stock deduction and row-level locking.
+    """
+    
+    # Status choices
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('confirmed', 'Confirmed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    # Primary key
+    id = models.BigAutoField(primary_key=True)
+    
+    # Order relationship
+    order = models.ForeignKey(
+        SaleOrder,
+        on_delete=models.PROTECT,
+        related_name='invoices',
+        help_text="Source sale order for this invoice"
+    )
+    
+    # Invoice details
+    invoice_date = models.DateField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="Date when invoice was created"
+    )
+    
+    due_date = models.DateField(
+        help_text="Payment due date"
+    )
+    
+    total_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Total invoice amount (copied from order)"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='draft',
+        db_index=True,
+        help_text="Current status of the invoice"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'customer_invoices'
+        verbose_name = 'Customer Invoice'
+        verbose_name_plural = 'Customer Invoices'
+        ordering = ['-invoice_date']
+        indexes = [
+            models.Index(fields=['invoice_date'], name='invoice_date_idx'),
+            models.Index(fields=['status'], name='invoice_status_idx'),
+        ]
+    
+    def clean(self):
+        """Validate model fields before saving."""
+        super().clean()
+        
+        # Validate due_date is after invoice_date
+        if self.due_date and self.invoice_date:
+            if self.due_date <= self.invoice_date:
+                raise ValidationError({
+                    'due_date': 'Due date must be after invoice date.'
+                })
+    
+    def save(self, *args, **kwargs):
+        """Override save to call clean()."""
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Invoice #{self.id} - Order #{self.order.id}"
+    
+    def can_transition_to(self, new_status):
+        """
+        Check if status transition is valid.
+        Valid transitions:
+        - draft -> confirmed
+        - draft -> cancelled
+        """
+        valid_transitions = {
+            'draft': ['confirmed', 'cancelled'],
+            'confirmed': [],  # Terminal state
+            'cancelled': [],  # Terminal state
+        }
+        return new_status in valid_transitions.get(self.status, [])
+
+
+class Payment(models.Model):
+    """
+    Payment record for customer invoices or vendor bills.
+    Supports multiple payment methods including Razorpay integration.
+    """
+    
+    # Payment method choices
+    METHOD_CHOICES = [
+        ('razorpay', 'Razorpay'),
+        ('cash', 'Cash'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('cheque', 'Cheque'),
+    ]
+    
+    # Primary key
+    id = models.BigAutoField(primary_key=True)
+    
+    # Payment details
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text="Payment amount (must be positive)"
+    )
+    
+    payment_date = models.DateTimeField(
+        db_index=True,
+        help_text="Date and time when payment was made"
+    )
+    
+    method = models.CharField(
+        max_length=20,
+        choices=METHOD_CHOICES,
+        default='razorpay',
+        help_text="Payment method used"
+    )
+    
+    # Foreign keys (exactly one must be non-null)
+    customer_invoice = models.ForeignKey(
+        'CustomerInvoice',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='payments',
+        help_text="Customer invoice this payment is for"
+    )
+    
+    vendor_bill = models.ForeignKey(
+        'VendorBill',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='payments',
+        help_text="Vendor bill this payment is for"
+    )
+    
+    # Razorpay fields
+    razorpay_order_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Razorpay order ID"
+    )
+    
+    razorpay_payment_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        help_text="Razorpay payment ID"
+    )
+    
+    razorpay_signature = models.CharField(
+        max_length=512,
+        null=True,
+        blank=True,
+        help_text="Razorpay signature for verification"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'payments'
+        verbose_name = 'Payment'
+        verbose_name_plural = 'Payments'
+        ordering = ['-payment_date']
+        indexes = [
+            models.Index(fields=['payment_date'], name='payment_date_idx'),
+            models.Index(fields=['razorpay_payment_id'], name='razorpay_payment_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(customer_invoice__isnull=False, vendor_bill__isnull=True) |
+                    models.Q(customer_invoice__isnull=True, vendor_bill__isnull=False)
+                ),
+                name='payment_exactly_one_fk'
+            ),
+        ]
+    
+    def clean(self):
+        """Validate model fields before saving."""
+        super().clean()
+        
+        # Validate exactly one FK is set
+        if not self.customer_invoice and not self.vendor_bill:
+            raise ValidationError(
+                "Payment must be linked to either a customer invoice or vendor bill."
+            )
+        
+        if self.customer_invoice and self.vendor_bill:
+            raise ValidationError(
+                "Payment cannot be linked to both customer invoice and vendor bill."
+            )
+        
+        # Validate Razorpay fields when method is razorpay
+        if self.method == 'razorpay' and not self.razorpay_order_id:
+            raise ValidationError({
+                'razorpay_order_id': 'Razorpay order ID is required for Razorpay payments.'
+            })
+    
+    def save(self, *args, **kwargs):
+        """Override save to call clean()."""
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        target = self.customer_invoice or self.vendor_bill
+        target_type = "Invoice" if self.customer_invoice else "Bill"
+        return f"Payment #{self.id} - {target_type} #{target.id} - {self.amount}"
+
+
+class VendorBill(models.Model):
+    """
+    Placeholder model for vendor bills.
+    This is a stub to allow Payment model to reference it.
+    Full implementation will be added in a future task.
+    """
+    id = models.BigAutoField(primary_key=True)
+    total_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Total bill amount"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'vendor_bills'
+        verbose_name = 'Vendor Bill'
+        verbose_name_plural = 'Vendor Bills'
+    
+    def __str__(self):
+        return f"Vendor Bill #{self.id}"
