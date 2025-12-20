@@ -4,191 +4,118 @@ import Navigation from '../components/Navigation';
 import Breadcrumb from '../components/Breadcrumb';
 import FilterSidebar from '../components/FilterSidebar';
 import ProductCard from '../components/ProductCard';
+import { productsAPI } from '../utils/api';
 
 const Shop = () => {
-  const { category, productId } = useParams();
+  const { category } = useParams();
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('All Products');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [filters, setFilters] = useState({});
   const [products, setProducts] = useState([]);
-
-  // Product categories
-  const categories = [
-    'All Products',
-    'T-shirts',
-    'Shirts', 
-    'Kurtas',
-    'Formals',
-    'Jeans',
-    'Hoodies',
-    'Sarees',
-    'Nightwear'
-  ];
-
-  // Sample products data (in real app, this would come from backend)
-  const sampleProducts = [
-    {
-      id: 1,
-      name: 'Highlander Men\'s Striped Shirt',
-      description: 'Premium cotton striped shirt for men',
-      price: 1299,
-      originalPrice: 1999,
-      category: 'Shirts',
-      image: null,
-      size: ['M', 'L', 'XL'],
-      color: 'Blue',
-      material: 'Cotton'
-    },
-    {
-      id: 2,
-      name: 'Classic White T-Shirt',
-      description: 'Comfortable cotton t-shirt',
-      price: 599,
-      category: 'T-shirts',
-      image: null,
-      size: ['S', 'M', 'L'],
-      color: 'White',
-      material: 'Cotton'
-    },
-    {
-      id: 3,
-      name: 'Designer Kurta',
-      description: 'Traditional designer kurta',
-      price: 2499,
-      category: 'Kurtas',
-      image: null,
-      size: ['M', 'L', 'XL'],
-      color: 'White',
-      material: 'Cotton'
-    },
-    {
-      id: 4,
-      name: 'Formal Black Shirt',
-      description: 'Professional formal shirt',
-      price: 1599,
-      category: 'Formals',
-      image: null,
-      size: ['M', 'L', 'XL'],
-      color: 'Black',
-      material: 'Cotton'
-    },
-    {
-      id: 5,
-      name: 'Blue Denim Jeans',
-      description: 'Classic fit denim jeans',
-      price: 1899,
-      category: 'Jeans',
-      image: null,
-      size: ['30', '32', '34'],
-      color: 'Blue',
-      material: 'Denim'
-    },
-    {
-      id: 6,
-      name: 'Comfortable Hoodie',
-      description: 'Warm and comfortable hoodie',
-      price: 1799,
-      category: 'Hoodies',
-      image: null,
-      size: ['M', 'L', 'XL'],
-      color: 'Gray',
-      material: 'Cotton'
-    },
-    {
-      id: 7,
-      name: 'Silk Saree',
-      description: 'Beautiful silk saree',
-      price: 4999,
-      category: 'Sarees',
-      image: null,
-      size: ['Free Size'],
-      color: 'Red',
-      material: 'Silk'
-    },
-    {
-      id: 8,
-      name: 'Cotton Nightwear',
-      description: 'Comfortable cotton nightwear',
-      price: 899,
-      category: 'Nightwear',
-      image: null,
-      size: ['M', 'L', 'XL'],
-      color: 'Pink',
-      material: 'Cotton'
-    }
-  ];
+  const [categories, setCategories] = useState(['All Products']);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Set category from URL parameter
   useEffect(() => {
     if (category) {
       const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1);
-      if (categories.includes(formattedCategory)) {
-        setSelectedCategory(formattedCategory);
-      }
+      setSelectedCategory(formattedCategory);
     }
   }, [category]);
 
+  // Fetch categories on component mount
   useEffect(() => {
-    // Filter products based on selected category and filters
-    let filteredProducts = sampleProducts;
+    const fetchCategories = async () => {
+      try {
+        const response = await productsAPI.getCategories();
+        const backendCategories = response.categories || [];
+        setCategories(['All Products', ...backendCategories]);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        // Use fallback categories if API fails
+        setCategories([
+          'All Products',
+          'T-shirts',
+          'Shirts', 
+          'Kurtas',
+          'Formals',
+          'Jeans',
+          'Hoodies',
+          'Sarees',
+          'Nightwear'
+        ]);
+      }
+    };
 
-    // Filter by category
-    if (selectedCategory !== 'All Products') {
-      filteredProducts = filteredProducts.filter(product => 
-        product.category === selectedCategory
-      );
-    }
+    fetchCategories();
+  }, []);
 
-    // Filter by search query
-    if (searchQuery) {
-      filteredProducts = filteredProducts.filter(product =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
+  // Fetch products based on filters and search
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
 
-    // Apply additional filters
-    Object.keys(filters).forEach(filterType => {
-      if (filters[filterType] && filters[filterType].length > 0) {
-        switch (filterType) {
-          case 'color':
-            filteredProducts = filteredProducts.filter(product =>
-              filters[filterType].includes(product.color)
-            );
-            break;
-          case 'material':
-            filteredProducts = filteredProducts.filter(product =>
-              filters[filterType].includes(product.material)
-            );
-            break;
-          case 'priceRange':
-            filteredProducts = filteredProducts.filter(product => {
-              return filters[filterType].some(range => {
-                const [min, max] = range.split('-').map(Number);
-                return product.price >= min && (max === Infinity || product.price <= max);
-              });
-            });
-            break;
+      try {
+        const params = {};
+
+        // Add category filter
+        if (selectedCategory !== 'All Products') {
+          params.category = selectedCategory;
         }
-      }
-    });
 
-    // Sort products
-    filteredProducts.sort((a, b) => {
-      switch (sortBy) {
-        case 'price-low':
-          return a.price - b.price;
-        case 'price-high':
-          return b.price - a.price;
-        case 'name':
-        default:
-          return a.name.localeCompare(b.name);
-      }
-    });
+        // Add search query
+        if (searchQuery) {
+          params.search = searchQuery;
+        }
 
-    setProducts(filteredProducts);
+        // Add sorting
+        params.sort = sortBy;
+
+        // Add material filter
+        if (filters.material && filters.material.length > 0) {
+          params.material = filters.material[0]; // API expects single material for now
+        }
+
+        // Add price range filter
+        if (filters.priceRange && filters.priceRange.length > 0) {
+          const priceRange = filters.priceRange[0];
+          const [min, max] = priceRange.split('-').map(Number);
+          if (min !== undefined) params.min_price = min;
+          if (max !== undefined && max !== Infinity) params.max_price = max;
+        }
+
+        const response = await productsAPI.getProducts(params);
+        
+        // Transform backend data to frontend format
+        // Handle both paginated (response.results) and direct array responses
+        const productsData = response.results || response;
+        const transformedProducts = Array.isArray(productsData) ? productsData.map(product => ({
+          id: product.id,
+          name: product.product_name,
+          description: `${product.material ? product.material + ' ' : ''}${product.product_type}`,
+          price: parseFloat(product.sales_price),
+          category: product.product_category,
+          image: null, // No images in current backend model
+          material: product.material,
+          colors: product.available_colors || [],
+          stock: product.current_stock
+        })) : [];
+
+        setProducts(transformedProducts);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setError('Failed to load products. Please try again.');
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
   }, [selectedCategory, searchQuery, sortBy, filters]);
 
   const handleCategoryChange = (category) => {
@@ -222,14 +149,6 @@ const Shop = () => {
       label: selectedCategory, 
       href: `/shop/${selectedCategory.toLowerCase()}` 
     });
-  }
-
-  // If viewing a specific product, add it to breadcrumb
-  if (productId) {
-    const product = sampleProducts.find(p => p.id === parseInt(productId));
-    if (product) {
-      breadcrumbItems.push({ label: product.name });
-    }
   }
 
   return (
@@ -293,33 +212,56 @@ const Shop = () => {
                 className="px-4 py-2 border border-app-border rounded-pro bg-app-surface text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent"
               >
                 <option value="name">Sort By: Name</option>
-                <option value="price-low">Sort By: Price (Low to High)</option>
-                <option value="price-high">Sort By: Price (High to Low)</option>
+                <option value="price_low">Sort By: Price (Low to High)</option>
+                <option value="price_high">Sort By: Price (High to Low)</option>
               </select>
             </div>
           </div>
 
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.length > 0 ? (
-              products.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12">
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
                 <div className="text-app-muted mb-4">
-                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  <svg className="w-8 h-8 mx-auto animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h3 className="font-display text-xl text-app-main mb-2">No products found</h3>
-                <p className="text-app-muted">Try adjusting your filters or search terms</p>
+                <p className="text-app-muted">Loading products...</p>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-pro text-sm mb-6">
+              {error}
+            </div>
+          )}
+
+          {/* Products Grid */}
+          {!loading && !error && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {products.length > 0 ? (
+                products.map(product => (
+                  <ProductCard key={product.id} product={product} />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <div className="text-app-muted mb-4">
+                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                  </div>
+                  <h3 className="font-display text-xl text-app-main mb-2">No products found</h3>
+                  <p className="text-app-muted">Try adjusting your filters or search terms</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Results Count */}
-          {products.length > 0 && (
+          {!loading && !error && products.length > 0 && (
             <div className="mt-8 text-center">
               <p className="text-app-muted font-sans text-sm">
                 Showing {products.length} product{products.length !== 1 ? 's' : ''}

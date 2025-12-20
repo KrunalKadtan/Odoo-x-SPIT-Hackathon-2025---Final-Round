@@ -1,6 +1,45 @@
 from django.contrib import admin
 from django.core.exceptions import ValidationError
-from .models import PaymentTerm
+from .models import PaymentTerm, Product, ProductColor
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = (
+        'product_name',
+        'product_category',
+        'product_type',
+        'material',
+        'sales_price',
+        'current_stock',
+        'published',
+        'created_at'
+    )
+    list_filter = ('product_category', 'product_type', 'material', 'published', 'created_at')
+    search_fields = ('product_name', 'product_category', 'material')
+    readonly_fields = ('created_at',)
+    ordering = ('product_name',)
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('product_name', 'product_category', 'product_type', 'material', 'published')
+        }),
+        ('Pricing', {
+            'fields': ('sales_price', 'sales_tax_percentage', 'purchase_price', 'purchase_tax_percentage')
+        }),
+        ('Inventory', {
+            'fields': ('current_stock',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+
+@admin.register(ProductColor)
+class ProductColorAdmin(admin.ModelAdmin):
+    list_display = ('product', 'color')
+    list_filter = ('color',)
+    search_fields = ('product__product_name', 'color')
 
 @admin.register(PaymentTerm)
 class PaymentTermAdmin(admin.ModelAdmin):

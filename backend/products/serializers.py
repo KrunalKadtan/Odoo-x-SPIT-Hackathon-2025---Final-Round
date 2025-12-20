@@ -2,7 +2,68 @@
 Serializers for the products app.
 """
 from rest_framework import serializers
-from .models import PaymentTerm
+from .models import PaymentTerm, Product, ProductColor
+
+
+class ProductColorSerializer(serializers.ModelSerializer):
+    """
+    Serializer for ProductColor model.
+    """
+    class Meta:
+        model = ProductColor
+        fields = ['color']
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Product model - list view.
+    """
+    colors = ProductColorSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Product
+        fields = [
+            'id',
+            'product_name',
+            'product_category',
+            'product_type',
+            'material',
+            'sales_price',
+            'current_stock',
+            'colors',
+            'created_at'
+        ]
+
+
+class ProductDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Product model - detail view with full information.
+    """
+    colors = ProductColorSerializer(many=True, read_only=True)
+    available_colors = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Product
+        fields = [
+            'id',
+            'product_name',
+            'product_category',
+            'product_type',
+            'material',
+            'sales_price',
+            'purchase_price',
+            'sales_tax_percentage',
+            'current_stock',
+            'colors',
+            'available_colors',
+            'created_at'
+        ]
+    
+    def get_available_colors(self, obj):
+        """
+        Get list of available colors for the product.
+        """
+        return [color.color for color in obj.colors.all()]
 
 
 class PaymentTermSerializer(serializers.ModelSerializer):

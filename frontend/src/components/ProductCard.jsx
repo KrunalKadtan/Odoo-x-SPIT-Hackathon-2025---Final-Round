@@ -1,8 +1,33 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 
 const ProductCard = ({ product }) => {
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
+
+  const handleProductClick = () => {
+    navigate(`/product/${product.category.toLowerCase()}/${product.id}`);
+  };
+
+  const handleAddToCart = (e) => {
+    e.stopPropagation(); // Prevent navigation when clicking add to cart
+    
+    // Add to cart with default selections
+    const defaultColor = product.colors && product.colors.length > 0 ? product.colors[0] : 'Default';
+    const defaultSize = 'M'; // Default size
+    
+    addToCart(product, defaultColor, defaultSize, 1);
+    
+    // Show success message with product details
+    alert(`✅ Added to Cart!\n\nProduct: ${product.name}\nPrice: ₹${product.price}\nColor: ${defaultColor}\nSize: ${defaultSize}\n\nGo to cart to view all items.`);
+  };
+
   return (
-    <div className="bg-app-surface rounded-pro shadow-sm border border-app-border hover:shadow-md transition-shadow duration-200 overflow-hidden">
+    <div 
+      onClick={handleProductClick}
+      className="bg-app-surface rounded-pro shadow-sm border border-app-border hover:shadow-md transition-shadow duration-200 overflow-hidden cursor-pointer"
+    >
       {/* Product Image */}
       <div className="aspect-square bg-app-secondary flex items-center justify-center relative">
         {product.image ? (
@@ -20,7 +45,10 @@ const ProductCard = ({ product }) => {
         )}
         
         {/* Add to Cart Button */}
-        <button className="absolute top-2 right-2 bg-app-surface border border-app-border rounded-pro p-2 hover:bg-app-secondary transition-colors duration-200">
+        <button 
+          onClick={handleAddToCart}
+          className="absolute top-2 right-2 bg-app-surface border border-app-border rounded-pro p-2 hover:bg-app-secondary transition-colors duration-200"
+        >
           <svg className="w-4 h-4 text-app-main" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5 6m0 0h9m-9 0V19a2 2 0 002 2h9a2 2 0 002-2v-6" />
           </svg>

@@ -50,8 +50,8 @@ const SignIn = () => {
       // Store tokens
       tokenUtils.setTokens(response);
       
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Redirect to home page
+      navigate('/');
       
     } catch (error) {
       console.error('Signin error:', error);

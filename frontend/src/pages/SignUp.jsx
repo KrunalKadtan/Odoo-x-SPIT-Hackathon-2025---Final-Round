@@ -63,11 +63,12 @@ const SignUp = () => {
 
       const response = await authAPI.signup(apiData);
       
-      // Store tokens
-      tokenUtils.setTokens(response.tokens);
+      // Don't store tokens, let user sign in manually
+      // tokenUtils.setTokens(response.tokens);
       
-      // Redirect to dashboard or home page
-      navigate('/dashboard');
+      // Show success message and redirect to signin
+      alert('Account created successfully! Please sign in with your credentials.');
+      navigate('/signin');
       
     } catch (error) {
       console.error('Signup error:', error);

@@ -106,6 +106,27 @@ export const authAPI = {
   },
 };
 
+// Products API functions
+export const productsAPI = {
+  // Get all products with filtering
+  getProducts: async (params = {}) => {
+    const response = await api.get('/products/', { params });
+    return response.data;
+  },
+
+  // Get single product by ID
+  getProduct: async (id) => {
+    const response = await api.get(`/products/${id}/`);
+    return response.data;
+  },
+
+  // Get product categories
+  getCategories: async () => {
+    const response = await api.get('/products/categories/');
+    return response.data;
+  },
+};
+
 // Utility functions for token management
 export const tokenUtils = {
   setTokens: (tokens) => {

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { tokenUtils } from '../utils/api';
+import { useCart } from '../context/CartContext';
 
 const Navigation = () => {
   const navigate = useNavigate();
+  const { getCartItemsCount } = useCart();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userName, setUserName] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -118,10 +120,19 @@ const Navigation = () => {
           {/* Right side - Cart and User */}
           <div className="flex items-center space-x-4">
             {/* Cart Icon */}
-            <button className="text-app-main hover:text-app-accent transition-colors duration-200">
+            <button 
+              onClick={() => navigate('/cart')}
+              className="relative text-app-main hover:text-app-accent transition-colors duration-200"
+            >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5 6m0 0h9m-9 0V19a2 2 0 002 2h9a2 2 0 002-2v-6" />
               </svg>
+              {/* Cart Count Badge */}
+              {getCartItemsCount() > 0 && (
+                <span className="absolute -top-2 -right-2 bg-app-accent text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-mono">
+                  {getCartItemsCount()}
+                </span>
+              )}
             </button>
 
             {/* User Authentication */}
