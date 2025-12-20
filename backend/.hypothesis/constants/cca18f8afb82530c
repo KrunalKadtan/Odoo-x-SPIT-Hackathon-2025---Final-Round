@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\project-aarav\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\models.py
+# hypothesis_version: 6.148.7
+
+[0.0, 100.0, 100, 255, ',', '-created_at', 'Active', 'Campaign end date', 'Campaign start date', 'Cancelled', 'Coupon', 'Coupons', 'Discount Offer', 'Discount Offers', 'Expired', 'Friday', 'Monday', 'Payment Term', 'Payment Terms', 'Saturday', 'Sunday', 'Thursday', 'Tuesday', 'Unique coupon code', 'Used', 'Wednesday', '^[A-Za-z0-9_-]+$', 'active', 'available_on', 'cancelled', 'code', 'color', 'colors', 'contact', 'coupon_code_idx', 'coupon_contact_idx', 'coupon_offer_idx', 'coupon_status_idx', 'coupons', 'discount_days', 'discount_offer', 'discount_offers', 'discount_percentage', 'end_date', 'expiration_date', 'expired', 'fixed_amount', 'is_default', 'name', 'payment_terms', 'percentage_of_total', 'product', 'start_date', 'status', 'used', 'valid_coupon_status', 'valid_discount_days']
