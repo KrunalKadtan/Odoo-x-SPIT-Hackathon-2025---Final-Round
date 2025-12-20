@@ -221,3 +221,168 @@ class TestPaymentTermFactory:
         
         assert term.name == custom_name
         assert term.discount_days == custom_days
+
+
+
+@pytest.mark.django_db
+class TestPaymentFactory:
+    """Test PaymentFactory generates valid Payment instances."""
+    
+    def test_creates_payment_for_customer_invoice_by_default(self):
+        """Test that PaymentFactory creates a payment for customer invoice by default."""
+        from tests.factories import PaymentFactory
+        
+        payment = PaymentFactory()
+        
+        assert payment.id is not None
+        assert payment.amount > 0
+        assert payment.payment_date is not None
+        assert payment.method == 'cash'
+        assert payment.customer_invoice is not None
+        assert payment.vendor_bill is None
+        assert payment.razorpay_order_id is None
+        assert payment.razorpay_payment_id is None
+        assert payment.razorpay_signature is None
+    
+    def test_creates_payment_for_vendor_bill_with_trait(self):
+        """Test that for_vendor_bill trait creates a payment for vendor bill."""
+        from tests.factories import PaymentFactory
+        
+        payment = PaymentFactory(for_vendor_bill=True)
+        
+        assert payment.customer_invoice is None
+        assert payment.vendor_bill is not None
+        assert payment.method == 'cash'
+    
+    def test_creates_razorpay_payment_with_trait(self):
+        """Test that razorpay trait creates a Razorpay payment."""
+        from tests.factories import PaymentFactory
+        
+        payment = PaymentFactory(razorpay=True)
+        
+        assert payment.method == 'razorpay'
+        assert payment.razorpay_order_id is not None
+        assert payment.razorpay_payment_id is not None
+        assert payment.razorpay_signature is not None
+        assert payment.customer_invoice is not None
+    
+    def test_creates_cash_payment_with_trait(self):
+        """Test that cash trait creates a cash payment."""
+        from tests.factories import PaymentFactory
+        
+        payment = PaymentFactory(cash=True)
+        
+        assert payment.method == 'cash'
+        assert payment.razorpay_order_id is None
+        assert payment.razorpay_payment_id is None
+        assert payment.razorpay_signature is None
+    
+    def test_creates_bank_transfer_payment_with_trait(self):
+        """Test that bank_transfer trait creates a bank transfer payment."""
+        from tests.factories import PaymentFactory
+        
+        payment = PaymentFactory(bank_transfer=True)
+        
+        assert payment.method == 'bank_transfer'
+        assert payment.razorpay_order_id is None
+    
+    def test_creates_cheque_payment_with_trait(self):
+        """Test that cheque trait creates a cheque payment."""
+        from tests.factories import PaymentFactory
+        
+        payment = PaymentFactory(cheque=True)
+        
+        assert payment.method == 'cheque'
+        assert payment.razorpay_order_id is None
+    
+    def test_creates_payment_with_specific_invoice(self):
+        """Test creating a payment with a specific invoice."""
+        from tests.factories import PaymentFactory, CustomerInvoiceFactory
+        
+        invoice = CustomerInvoiceFactory()
+        payment = PaymentFactory(customer_invoice=invoice)
+        
+        assert payment.customer_invoice.id == invoice.id
+        assert payment.vendor_bill is None
+    
+    def test_creates_payment_with_specific_bill(self):
+        """Test creating a payment with a specific vendor bill."""
+        from tests.factories import PaymentFactory, VendorBillFactory
+        
+        bill = VendorBillFactory()
+        payment = PaymentFactory(customer_invoice=None, vendor_bill=bill)
+        
+        assert payment.vendor_bill.id == bill.id
+        assert payment.customer_invoice is None
+    
+    def test_fk_exclusivity_is_enforced(self):
+        """Test that FK exclusivity constraint is enforced."""
+        from tests.factories import PaymentFactory, CustomerInvoiceFactory, VendorBillFactory
+        
+        # Try to create with both FKs set - should raise ValidationError
+        invoice = CustomerInvoiceFactory()
+        bill = VendorBillFactory()
+        
+        with pytest.raises(Exception):  # Will raise ValidationError
+            payment = PaymentFactory(customer_invoice=invoice, vendor_bill=bill)
+    
+    def test_creates_batch_of_payments(self):
+        """Test that create_batch creates multiple payments."""
+        from tests.factories import PaymentFactory
+        
+        payments = PaymentFactory.create_batch(5)
+        
+        assert len(payments) == 5
+        for payment in payments:
+            assert payment.id is not None
+            assert payment.amount > 0
+    
+    def test_custom_values_override_defaults(self):
+        """Test that custom values override factory defaults."""
+        from tests.factories import PaymentFactory
+        from decimal import Decimal
+        
+        custom_amount = Decimal('500.00')
+        custom_method = 'bank_transfer'
+        
+        payment = PaymentFactory(amount=custom_amount, method=custom_method)
+        
+        assert payment.amount == custom_amount
+        assert payment.method == custom_method
+
+
+@pytest.mark.django_db
+class TestVendorBillFactory:
+    """Test VendorBillFactory generates valid VendorBill instances."""
+    
+    def test_creates_vendor_bill(self):
+        """Test that VendorBillFactory creates a valid vendor bill."""
+        from tests.factories import VendorBillFactory
+        
+        bill = VendorBillFactory()
+        
+        assert bill.id is not None
+        assert bill.total_amount > 0
+        assert bill.created_at is not None
+    
+    def test_creates_batch_of_vendor_bills(self):
+        """Test that create_batch creates multiple vendor bills."""
+        from tests.factories import VendorBillFactory
+        
+        bills = VendorBillFactory.create_batch(5)
+        
+        assert len(bills) == 5
+        for bill in bills:
+            assert bill.id is not None
+            assert bill.total_amount > 0
+    
+    def test_custom_values_override_defaults(self):
+        """Test that custom values override factory defaults."""
+        from tests.factories import VendorBillFactory
+        from decimal import Decimal
+        
+        custom_amount = Decimal('1500.00')
+        
+        bill = VendorBillFactory(total_amount=custom_amount)
+        
+        assert bill.total_amount == custom_amount

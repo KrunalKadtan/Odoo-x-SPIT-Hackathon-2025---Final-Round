@@ -165,3 +165,14 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Razorpay Configuration
+RAZORPAY_API_KEY = config('RAZORPAY_API_KEY', default='')
+RAZORPAY_API_SECRET = config('RAZORPAY_API_SECRET', default='')
+RAZORPAY_TEST_MODE = config('RAZORPAY_TEST_MODE', default=True, cast=bool)
+
+# Log warning if in test mode
+if RAZORPAY_TEST_MODE:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning("Razorpay is running in TEST MODE. Use test credentials only.")
