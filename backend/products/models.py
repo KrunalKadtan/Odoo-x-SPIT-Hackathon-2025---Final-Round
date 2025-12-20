@@ -94,7 +94,10 @@ class Product(models.Model):
 
     class Meta:
         constraints = [
-            CheckConstraint(check=Q(current_stock__gte=0), name='check_current_stock_non_negative')
+            models.CheckConstraint(
+                condition=models.Q(current_stock__gte=0), 
+                name='check_current_stock_non_negative'
+            )
         ]
 
     def __str__(self):
@@ -192,11 +195,11 @@ class PaymentTerm(models.Model):
         ordering = ['name']
         constraints = [
             models.CheckConstraint(
-                check=Q(discount_percentage__gte=0) & Q(discount_percentage__lte=100),
+                condition=Q(discount_percentage__gte=0) & Q(discount_percentage__lte=100),
                 name='valid_discount_percentage'
             ),
             models.CheckConstraint(
-                check=Q(discount_days__gte=0),
+                condition=Q(discount_days__gte=0),
                 name='valid_discount_days'
             ),
         ]
@@ -317,11 +320,11 @@ class DiscountOffer(models.Model):
         ordering = ['-created_at']
         constraints = [
             models.CheckConstraint(
-                check=Q(discount_percentage__gte=0) & Q(discount_percentage__lte=100),
+                condition=Q(discount_percentage__gte=0) & Q(discount_percentage__lte=100),
                 name='valid_discount_offer_percentage'
             ),
             models.CheckConstraint(
-                check=Q(start_date__lte=models.F('end_date')),
+                condition=Q(start_date__lte=models.F('end_date')),
                 name='valid_discount_date_range'
             )
         ]
@@ -448,7 +451,7 @@ class Coupon(models.Model):
         ordering = ['-created_at']
         constraints = [
             models.CheckConstraint(
-                check=Q(status__in=['active', 'used', 'expired', 'cancelled']),
+                condition=Q(status__in=['active', 'used', 'expired', 'cancelled']),
                 name='valid_coupon_status'
             )
         ]
@@ -683,7 +686,7 @@ class SaleOrderLine(models.Model):
         ordering = ['id']
         constraints = [
             models.CheckConstraint(
-                check=models.Q(quantity__gt=0),
+                condition=models.Q(quantity__gt=0),
                 name='valid_line_quantity'
             )
         ]
@@ -892,7 +895,7 @@ class Payment(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                check=(
+                condition=(
                     models.Q(customer_invoice__isnull=False, vendor_bill__isnull=True) |
                     models.Q(customer_invoice__isnull=True, vendor_bill__isnull=False)
                 ),
@@ -932,24 +935,404 @@ class Payment(models.Model):
         return f"Payment #{self.id} - {target_type} #{target.id} - {self.amount}"
 
 
-class VendorBill(models.Model):
+class PurchaseOrder(models.Model):
     """
-    Placeholder model for vendor bills.
-    This is a stub to allow Payment model to reference it.
-    Full implementation will be added in a future task.
+    Purchase order for ordering products from vendors.
+    Tracks vendor, order details, and status.
     """
+    
+    # Status choices
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('confirmed', 'Confirmed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    # Primary key
     id = models.BigAutoField(primary_key=True)
+    
+    # Vendor relationship (Contact with type vendor or both)
+    vendor = models.ForeignKey(
+        'accounts.Contact',
+        on_delete=models.PROTECT,
+        related_name='purchase_orders',
+        db_index=True,
+        help_text="Vendor contact for this purchase order"
+    )
+    
+    # Order details
+    order_date = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="Date and time when purchase order was created"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='draft',
+        db_index=True,
+        help_text="Current status of the purchase order"
+    )
+    
+    # Monetary fields (calculated server-side)
+    subtotal = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Sum of all line item totals"
+    )
+    
+    tax_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Total tax amount"
+    )
+    
     total_amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        help_text="Total bill amount"
+        default=Decimal('0.00'),
+        help_text="Final total including tax"
     )
+    
+    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'purchase_orders'
+        verbose_name = 'Purchase Order'
+        verbose_name_plural = 'Purchase Orders'
+        ordering = ['-order_date']
+        indexes = [
+            models.Index(fields=['vendor'], name='purchase_order_vendor_idx'),
+            models.Index(fields=['order_date'], name='purchase_order_date_idx'),
+            models.Index(fields=['status'], name='purchase_order_status_idx'),
+        ]
+    
+    def clean(self):
+        """Validate model fields before saving."""
+        super().clean()
+        
+        # Validate vendor is a vendor or both type contact
+        if self.vendor and self.vendor.type not in ['vendor', 'both']:
+            raise ValidationError({
+                'vendor': 'Contact must be a vendor or both type.'
+            })
+    
+    def save(self, *args, **kwargs):
+        """Override save to call clean()."""
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"PO #{self.id} - {self.vendor.name}"
+    
+    def can_transition_to(self, new_status):
+        """
+        Check if status transition is valid.
+        Valid transitions:
+        - draft -> confirmed
+        - draft -> cancelled
+        - confirmed -> cancelled
+        """
+        valid_transitions = {
+            'draft': ['confirmed', 'cancelled'],
+            'confirmed': ['cancelled'],
+            'cancelled': [],  # Terminal state
+        }
+        return new_status in valid_transitions.get(self.status, [])
+    
+    def confirm(self):
+        """Transition purchase order to confirmed status."""
+        if not self.can_transition_to('confirmed'):
+            raise ValidationError(f"Cannot confirm purchase order in {self.status} status")
+        self.status = 'confirmed'
+        self.save()
+    
+    def cancel(self):
+        """Transition purchase order to cancelled status."""
+        if not self.can_transition_to('cancelled'):
+            raise ValidationError(f"Cannot cancel purchase order in {self.status} status")
+        self.status = 'cancelled'
+        self.save()
+
+
+class PurchaseOrderLine(models.Model):
+    """
+    Individual line item within a purchase order.
+    Represents a product, quantity, and calculated totals.
+    """
+    
+    # Primary key
+    id = models.BigAutoField(primary_key=True)
+    
+    # Purchase order relationship (CASCADE delete)
+    purchase_order = models.ForeignKey(
+        PurchaseOrder,
+        on_delete=models.CASCADE,
+        related_name='lines',
+        db_index=True,
+        help_text="Parent purchase order"
+    )
+    
+    # Product relationship (PROTECT delete)
+    product = models.ForeignKey(
+        'Product',
+        on_delete=models.PROTECT,
+        related_name='purchase_order_lines',
+        db_index=True,
+        help_text="Product being ordered"
+    )
+    
+    # Quantity
+    quantity = models.IntegerField(
+        validators=[MinValueValidator(1)],
+        help_text="Quantity ordered (must be positive)"
+    )
+    
+    # Pricing (captured at order time)
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Unit price at time of order (from Product.purchase_price)"
+    )
+    
+    tax_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
+        help_text="Tax percentage for this line"
+    )
+    
+    line_subtotal = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Line subtotal (quantity * unit_price)"
+    )
+    
+    line_tax = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Tax amount for this line"
+    )
+    
+    line_total = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Line total (subtotal + tax)"
+    )
+    
+    class Meta:
+        db_table = 'purchase_order_lines'
+        verbose_name = 'Purchase Order Line'
+        verbose_name_plural = 'Purchase Order Lines'
+        ordering = ['id']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(quantity__gt=0),
+                name='valid_purchase_line_quantity'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['purchase_order'], name='purchase_line_order_idx'),
+            models.Index(fields=['product'], name='purchase_line_product_idx'),
+        ]
+    
+    def __str__(self):
+        return f"PO #{self.purchase_order.id} - {self.product.product_name} x {self.quantity}"
+    
+    def calculate_line_totals(self):
+        """Calculate line subtotal, tax, and total from quantity and unit price."""
+        self.line_subtotal = Decimal(str(self.quantity)) * self.unit_price
+        self.line_tax = (self.line_subtotal * self.tax_percentage) / Decimal('100')
+        self.line_total = self.line_subtotal + self.line_tax
+
+
+class VendorBill(models.Model):
+    """
+    Vendor bill generated from a confirmed purchase order.
+    Supports confirmation with stock update.
+    """
+    
+    # Status choices
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('confirmed', 'Confirmed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    # Primary key
+    id = models.BigAutoField(primary_key=True)
+    
+    # Purchase order relationship
+    purchase_order = models.ForeignKey(
+        PurchaseOrder,
+        on_delete=models.PROTECT,
+        related_name='vendor_bills',
+        db_index=True,
+        help_text="Source purchase order for this bill"
+    )
+    
+    # Vendor relationship (denormalized for quick access)
+    vendor = models.ForeignKey(
+        'accounts.Contact',
+        on_delete=models.PROTECT,
+        related_name='vendor_bills',
+        db_index=True,
+        help_text="Vendor for this bill"
+    )
+    
+    # Bill details
+    bill_date = models.DateField(
+        default=datetime.date.today,
+        db_index=True,
+        help_text="Date when bill was created"
+    )
+    
+    due_date = models.DateField(
+        help_text="Payment due date"
+    )
+    
+    total_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Total bill amount (copied from purchase order)"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='draft',
+        db_index=True,
+        help_text="Current status of the bill"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         db_table = 'vendor_bills'
         verbose_name = 'Vendor Bill'
         verbose_name_plural = 'Vendor Bills'
+        ordering = ['-bill_date']
+        indexes = [
+            models.Index(fields=['vendor'], name='vendor_bill_vendor_idx'),
+            models.Index(fields=['bill_date'], name='vendor_bill_date_idx'),
+            models.Index(fields=['status'], name='vendor_bill_status_idx'),
+        ]
+    
+    def clean(self):
+        """Validate model fields before saving."""
+        super().clean()
+        
+        # Validate due_date is after bill_date
+        if self.due_date and self.bill_date:
+            if self.due_date <= self.bill_date:
+                raise ValidationError({
+                    'due_date': 'Due date must be after bill date.'
+                })
+        
+        # Validate vendor matches purchase order vendor
+        if self.purchase_order and self.vendor:
+            if self.vendor != self.purchase_order.vendor:
+                raise ValidationError({
+                    'vendor': 'Vendor must match purchase order vendor.'
+                })
+    
+    def save(self, *args, **kwargs):
+        """Override save to call clean()."""
+        self.full_clean()
+        super().save(*args, **kwargs)
     
     def __str__(self):
-        return f"Vendor Bill #{self.id}"
+        return f"Vendor Bill #{self.id} - PO #{self.purchase_order.id}"
+    
+    def can_transition_to(self, new_status):
+        """
+        Check if status transition is valid.
+        Valid transitions:
+        - draft -> confirmed
+        - draft -> cancelled
+        """
+        valid_transitions = {
+            'draft': ['confirmed', 'cancelled'],
+            'confirmed': [],  # Terminal state
+            'cancelled': [],  # Terminal state
+        }
+        return new_status in valid_transitions.get(self.status, [])
+
+
+class SystemSettings(models.Model):
+    """
+    Singleton model for system-wide settings.
+    Only one row is allowed in the database, enforced by CHECK constraint.
+    """
+    
+    # Primary key (always 1 for singleton)
+    id = models.IntegerField(
+        primary_key=True,
+        default=1,
+        help_text="Always 1 for singleton pattern"
+    )
+    
+    # Settings fields
+    automatic_invoicing = models.BooleanField(
+        default=False,
+        help_text="Enable automatic invoice generation from confirmed orders"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'system_settings'
+        verbose_name = 'System Settings'
+        verbose_name_plural = 'System Settings'
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(id=1),
+                name='system_settings_singleton'
+            ),
+        ]
+    
+    def save(self, *args, **kwargs):
+        """Override save to enforce singleton pattern."""
+        # Always use id=1
+        self.id = 1
+        self.pk = 1
+        
+        # If record exists, mark this as an update not an insert
+        if SystemSettings.objects.filter(id=1).exists():
+            self._state.adding = False
+            # Don't update created_at on existing records
+            if 'update_fields' not in kwargs:
+                # Get all fields except id and created_at
+                update_fields = [f.name for f in self._meta.fields 
+                               if f.name not in ['id', 'created_at']]
+                kwargs['update_fields'] = update_fields
+        
+        super().save(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        """Prevent deletion of singleton instance."""
+        raise ValidationError("Cannot delete system settings. Modify the existing record instead.")
+    
+    @classmethod
+    def load(cls):
+        """
+        Load the singleton instance, creating it if it doesn't exist.
+        
+        Returns:
+            SystemSettings: The singleton instance
+        """
+        obj, created = cls.objects.get_or_create(id=1)
+        return obj
+    
+    def __str__(self):
+        return "System Settings"

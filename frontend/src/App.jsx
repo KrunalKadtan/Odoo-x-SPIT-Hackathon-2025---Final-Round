@@ -15,45 +15,19 @@ import OrderConfirmation from './pages/OrderConfirmation';
 import OrderError from './pages/OrderError';
 import MyAccount from './pages/MyAccount';
 import Payment from './pages/Payment';
-import AdminProducts from './pages/admin/AdminProducts';
-import AdminBilling from './pages/admin/AdminBilling';
-import AdminTerms from './pages/admin/AdminTerms';
-import AdminUsers from './pages/admin/AdminUsers';
-import AdminReports from './pages/admin/AdminReports';
-import AdminProfile from './pages/admin/AdminProfile';
-import AdminSignIn from './pages/AdminSignIn';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   return tokenUtils.isAuthenticated() ? children : <Navigate to="/signin" />;
 };
 
-// Admin Route component (only for internal users)
-const AdminRoute = ({ children }) => {
-  if (!tokenUtils.isAuthenticated()) {
-    return <Navigate to="/signin" />;
-  }
-  
-  const userRole = tokenUtils.getUserRole();
-  if (userRole !== 'internal') {
+// Public Route component (redirect if already authenticated)
+const PublicRoute = ({ children }) => {
+  if (tokenUtils.isAuthenticated()) {
     return <Navigate to="/" />;
   }
   
   return children;
-};
-
-// Public Route component (redirect based on role if already authenticated)
-const PublicRoute = ({ children }) => {
-  if (!tokenUtils.isAuthenticated()) {
-    return children;
-  }
-  
-  const userRole = tokenUtils.getUserRole();
-  if (userRole === 'internal') {
-    return <Navigate to="/admin/products" />;
-  }
-  
-  return <Navigate to="/" />;
 };
 
 function App() {
@@ -103,15 +77,6 @@ function App() {
               } 
             />
             
-            <Route 
-              path="/admin/signin" 
-              element={
-                <PublicRoute>
-                  <AdminSignIn />
-                </PublicRoute>
-              } 
-            />
-            
             {/* Protected routes for portal users */}
             <Route 
               path="/payment" 
@@ -127,60 +92,6 @@ function App() {
                 <ProtectedRoute>
                   <MyAccount />
                 </ProtectedRoute>
-              } 
-            />
-            
-            {/* Admin routes for internal users */}
-            <Route 
-              path="/admin" 
-              element={<Navigate to="/admin/products" />} 
-            />
-            <Route 
-              path="/admin/products" 
-              element={
-                <AdminRoute>
-                  <AdminProducts />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/profile" 
-              element={
-                <AdminRoute>
-                  <AdminProfile />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/billing" 
-              element={
-                <AdminRoute>
-                  <AdminBilling />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/terms" 
-              element={
-                <AdminRoute>
-                  <AdminTerms />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/users" 
-              element={
-                <AdminRoute>
-                  <AdminUsers />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/reports" 
-              element={
-                <AdminRoute>
-                  <AdminReports />
-                </AdminRoute>
               } 
             />
             

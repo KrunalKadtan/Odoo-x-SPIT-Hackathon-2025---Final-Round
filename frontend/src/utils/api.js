@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: 'http://127.0.0.1:8000/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -162,14 +162,24 @@ export const userAPI = {
 export const invoicesAPI = {
   // Get all invoices for current user
   getUserInvoices: async () => {
-    const response = await api.get('/products/invoices/');
-    return response.data;
+    try {
+      const response = await api.get('/products/invoices/');
+      return response.data.results || response.data || [];
+    } catch (error) {
+      console.error('Error fetching user invoices:', error);
+      return []; // Return empty array on error
+    }
   },
 
   // Get single invoice by ID
   getInvoice: async (invoiceId) => {
-    const response = await api.get(`/products/invoices/${invoiceId}/`);
-    return response.data;
+    try {
+      const response = await api.get(`/products/invoices/${invoiceId}/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching invoice:', error);
+      throw error;
+    }
   },
 };
 
@@ -215,20 +225,35 @@ export const cartAPI = {
 export const ordersAPI = {
   // Get all orders for current user
   getUserOrders: async () => {
-    const response = await api.get('/products/orders/');
-    return response.data;
+    try {
+      const response = await api.get('/products/orders/');
+      return response.data.results || response.data || [];
+    } catch (error) {
+      console.error('Error fetching user orders:', error);
+      return []; // Return empty array on error
+    }
   },
 
   // Get single order by ID
   getOrder: async (orderId) => {
-    const response = await api.get(`/products/orders/${orderId}/`);
-    return response.data;
+    try {
+      const response = await api.get(`/products/orders/${orderId}/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching order:', error);
+      throw error;
+    }
   },
 
   // Create order from cart (checkout)
   checkout: async () => {
-    const response = await api.post('/products/checkout/');
-    return response.data;
+    try {
+      const response = await api.post('/products/checkout/');
+      return response.data;
+    } catch (error) {
+      console.error('Error during checkout:', error);
+      throw error;
+    }
   },
 };
 export const paymentsAPI = {
@@ -309,43 +334,3 @@ export const tokenUtils = {
 };
 
 export default api;
-// Admin Products API functions
-export const adminProductsAPI = {
-  // Get all products with filtering
-  getProducts: async (params = {}) => {
-    const response = await api.get('/products/admin/products/', { params });
-    return response.data;
-  },
-
-  // Get single product by ID
-  getProduct: async (id) => {
-    const response = await api.get(`/products/admin/products/${id}/`);
-    return response.data;
-  },
-
-  // Create new product
-  createProduct: async (productData) => {
-    const response = await api.post('/products/admin/products/', productData);
-    return response.data;
-  },
-
-  // Update product
-  updateProduct: async (id, productData) => {
-    const response = await api.put(`/products/admin/products/${id}/`, productData);
-    return response.data;
-  },
-
-  // Delete product
-  deleteProduct: async (id) => {
-    const response = await api.delete(`/products/admin/products/${id}/`);
-    return response.data;
-  },
-
-  // Toggle published status
-  togglePublished: async (id, published) => {
-    const response = await api.patch(`/products/admin/products/${id}/toggle-published/`, {
-      published: published
-    });
-    return response.data;
-  },
-};

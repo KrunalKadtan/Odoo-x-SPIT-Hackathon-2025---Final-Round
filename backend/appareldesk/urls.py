@@ -1,6 +1,16 @@
 """
 URL configuration for appareldesk project.
 
+This is the main URL configuration that routes to all app-specific URLs.
+
+API Structure:
+- /api/token/ - JWT token obtain (POST)
+- /api/token/refresh/ - JWT token refresh (POST)
+- /api/accounts/ - Account management (signup, etc.)
+- /api/schema/ - OpenAPI schema (JSON/YAML)
+- /api/docs/ - Interactive API documentation (Swagger UI)
+- /api/ - All product/order/invoice/payment APIs (from products app)
+
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/4.2/topics/http/urls/
 Examples:
@@ -20,11 +30,26 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+)
 
 urlpatterns = [
+    # Django Admin
     path('admin/', admin.site.urls),
+    
+    # JWT Authentication endpoints
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # Account management (signup, etc.)
     path('api/accounts/', include('accounts.urls')),
+    
+    # OpenAPI Schema and Documentation
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    
+    # All REST API endpoints (products, orders, invoices, payments, etc.)
     path('api/products/', include('products.urls')),
 ]

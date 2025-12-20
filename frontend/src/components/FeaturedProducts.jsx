@@ -15,9 +15,12 @@ const FeaturedProducts = () => {
         const response = await productsAPI.getProducts();
         const products = response.results || response || [];
         
+        // Ensure products is an array
+        const productsArray = Array.isArray(products) ? products : [];
+        
         // Mock new arrivals and best sellers for demo
         // In real app, these would be separate API endpoints
-        const shuffled = [...products].sort(() => 0.5 - Math.random());
+        const shuffled = [...productsArray].sort(() => 0.5 - Math.random());
         setNewArrivals(shuffled.slice(0, 4));
         setBestSellers(shuffled.slice(4, 8));
       } catch (error) {
