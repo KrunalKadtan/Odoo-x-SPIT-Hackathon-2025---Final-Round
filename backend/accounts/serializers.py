@@ -7,7 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'email', 'name', 'role', 'mobile', 'city', 'state', 'pincode', 'created_at']
+        fields = ['id', 'email', 'name', 'role', 'mobile', 'address', 'city', 'state', 'pincode', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 
@@ -27,6 +27,7 @@ class PortalSignupSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, required=True, min_length=8)
     mobile = serializers.CharField(max_length=15, required=False, allow_blank=True)
+    address = serializers.CharField(required=False, allow_blank=True)
     city = serializers.CharField(max_length=100, required=False, allow_blank=True)
     state = serializers.CharField(max_length=100, required=False, allow_blank=True)
     pincode = serializers.CharField(max_length=6, required=False, allow_blank=True)

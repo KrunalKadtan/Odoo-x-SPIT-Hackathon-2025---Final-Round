@@ -91,6 +91,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     
     # Location fields
+    address = models.TextField(blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
     state = models.CharField(max_length=100, blank=True, null=True)
     pincode = models.CharField(

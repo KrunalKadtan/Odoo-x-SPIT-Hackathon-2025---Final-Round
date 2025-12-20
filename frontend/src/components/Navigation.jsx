@@ -84,8 +84,8 @@ const Navigation = () => {
             {/* Company Logo */}
             <div className="flex-shrink-0">
               <Link to="/" className="flex items-center">
-                <div className="bg-app-accent text-white px-3 py-1 rounded-pro font-mono text-sm tracking-wider">
-                  LOGO
+                <div className="bg-app-accent text-white px-4 py-2 rounded-pro font-mono text-lg tracking-wider">
+                  APPARELDESK
                 </div>
               </Link>
             </div>

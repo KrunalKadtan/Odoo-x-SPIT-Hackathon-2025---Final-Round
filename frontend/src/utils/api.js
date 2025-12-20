@@ -127,6 +127,21 @@ export const productsAPI = {
   },
 };
 
+// User Profile API functions
+export const userAPI = {
+  // Get current user profile
+  getProfile: async () => {
+    const response = await api.get('/accounts/profile/');
+    return response.data;
+  },
+
+  // Update user profile
+  updateProfile: async (profileData) => {
+    const response = await api.put('/accounts/profile/', profileData);
+    return response.data;
+  },
+};
+
 // Utility functions for token management
 export const tokenUtils = {
   setTokens: (tokens) => {
@@ -140,6 +155,16 @@ export const tokenUtils = {
 
   getRefreshToken: () => {
     return localStorage.getItem('refresh_token');
+  },
+
+  getUserData: () => {
+    try {
+      const userData = localStorage.getItem('user_data');
+      return userData ? JSON.parse(userData) : null;
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      return null;
+    }
   },
 
   clearTokens: () => {

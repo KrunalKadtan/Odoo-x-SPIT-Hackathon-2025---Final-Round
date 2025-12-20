@@ -1,10 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useNotification } from '../context/NotificationContext';
 
 const ProductCard = ({ product }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { showSuccess } = useNotification();
 
   const handleProductClick = () => {
     navigate(`/product/${product.category.toLowerCase()}/${product.id}`);
@@ -19,8 +21,8 @@ const ProductCard = ({ product }) => {
     
     addToCart(product, defaultColor, defaultSize, 1);
     
-    // Show success message with product details
-    alert(`✅ Added to Cart!\n\nProduct: ${product.name}\nPrice: ₹${product.price}\nColor: ${defaultColor}\nSize: ${defaultSize}\n\nGo to cart to view all items.`);
+    // Show success notification
+    showSuccess(`${product.name} added to cart!`, 'Added to Cart');
   };
 
   return (

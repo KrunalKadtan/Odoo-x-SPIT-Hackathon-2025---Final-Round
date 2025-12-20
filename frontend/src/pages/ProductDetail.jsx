@@ -4,11 +4,13 @@ import Navigation from '../components/Navigation';
 import Breadcrumb from '../components/Breadcrumb';
 import { productsAPI } from '../utils/api';
 import { useCart } from '../context/CartContext';
+import { useNotification } from '../context/NotificationContext';
 
 const ProductDetail = () => {
   const { category, productId } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { showSuccess } = useNotification();
   const [product, setProduct] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState('');
@@ -119,8 +121,11 @@ const ProductDetail = () => {
     // Add to cart using context
     addToCart(product, selectedColor, selectedSize, quantity);
     
-    // Show detailed success message
-    alert(`✅ Added to Cart!\n\nProduct: ${product.name}\nQuantity: ${quantity}\nPrice: ₹${product.price} each\nTotal: ₹${product.price * quantity}\nColor: ${selectedColor}\nSize: ${selectedSize}\n\nGo to cart to view all items.`);
+    // Show success notification
+    showSuccess(
+      `${quantity} ${product.name} added to cart! Color: ${selectedColor}, Size: ${selectedSize}`,
+      'Added to Cart'
+    );
     
     // Optionally redirect to cart
     // navigate('/cart');

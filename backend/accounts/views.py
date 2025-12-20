@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.db import transaction
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Contact
@@ -107,4 +107,74 @@ def portal_signup(request):
             {'error': f'Signup failed: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
+def profile(request):
+    """
+    User profile API endpoint.
+    
+    GET: Returns current user's profile data
+    PUT: Updates current user's profile data
+    
+    Returns user data with all available fields for address auto-fill.
+    """
+    user = request.user
+    
+    if request.method == 'GET':
+        # Return user profile data
+        serializer = UserSerializer(user)
+        profile_data = serializer.data
+        
+        # Add additional fields that frontend might expect
+        profile_data.update({
+            'full_name': user.name,
+            'first_name': user.name.split()[0] if user.name else '',
+            'last_name': ' '.join(user.name.split()[1:]) if user.name and len(user.name.split()) > 1 else '',
+            'phone': user.mobile or '',
+            'phone_number': user.mobile or '',
+            'mobile': user.mobile or '',
+            'address': user.address or '',
+            'city': user.city or '',
+            'state': user.state or '',
+            'pincode': user.pincode or '',
+            'postal_code': user.pincode or '',
+            'zip_code': user.pincode or '',
+        })
+        
+        return Response(profile_data, status=status.HTTP_200_OK)
+    
+    elif request.method == 'PUT':
+        # Update user profile
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            
+            # Refresh user from database to get updated values
+            user.refresh_from_db()
+            
+            # Return updated profile data
+            updated_data = serializer.data
+            updated_data.update({
+                'full_name': user.name,
+                'first_name': user.name.split()[0] if user.name else '',
+                'last_name': ' '.join(user.name.split()[1:]) if user.name and len(user.name.split()) > 1 else '',
+                'phone': user.mobile or '',
+                'phone_number': user.mobile or '',
+                'mobile': user.mobile or '',
+                'address': user.address or '',
+                'city': user.city or '',
+                'state': user.state or '',
+                'pincode': user.pincode or '',
+                'postal_code': user.pincode or '',
+                'zip_code': user.pincode or '',
+            })
+            
+            return Response(updated_data, status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {'errors': serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 

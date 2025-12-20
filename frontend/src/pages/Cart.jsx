@@ -1,13 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import { useCart } from '../context/CartContext';
+import { useNotification } from '../context/NotificationContext';
+import { tokenUtils, userAPI } from '../utils/api';
 
 const Cart = () => {
+  const navigate = useNavigate();
   const { cartItems, removeFromCart, updateQuantity, getCartTotal, getCartItemsCount } = useCart();
+  const { showSuccess, showError, showWarning, showInfo } = useNotification();
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [discountMessage, setDiscountMessage] = useState('');
   const [currentStep, setCurrentStep] = useState('order'); // order, address, payment
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false);
+  const [isAddressEditable, setIsAddressEditable] = useState(false);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(false);
   
   // Address form state
   const [addressForm, setAddressForm] = useState({
@@ -20,6 +28,105 @@ const Cart = () => {
     pincode: '',
     country: 'India'
   });
+
+  // Load user data for logged-in users
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (tokenUtils.isAuthenticated()) {
+        setIsLoadingUserData(true);
+        try {
+          showInfo('Loading your address details...');
+          
+          // Fetch fresh user data from database
+          const userData = await userAPI.getProfile();
+          console.log('Fresh user data from database:', userData);
+          
+          if (userData) {
+            // Build full name from available fields
+            let fullName = '';
+            if (userData.full_name) {
+              fullName = userData.full_name;
+            } else if (userData.first_name && userData.last_name) {
+              fullName = `${userData.first_name} ${userData.last_name}`;
+            } else if (userData.first_name) {
+              fullName = userData.first_name;
+            } else if (userData.name) {
+              fullName = userData.name;
+            } else if (userData.email) {
+              // Fallback: use email username as name
+              fullName = userData.email.split('@')[0];
+            }
+
+            // Get phone number from various possible fields and clean it
+            let phone = userData.phone || userData.phone_number || userData.mobile || '';
+            
+            // Clean phone number - remove +91, +, spaces, and other non-digits
+            if (phone) {
+              phone = phone.replace(/^\+91/, '').replace(/\D/g, '');
+              // Ensure it's exactly 10 digits
+              if (phone.length > 10) {
+                phone = phone.slice(-10); // Take last 10 digits
+              }
+            }
+
+            console.log('Processed phone number:', phone, 'from original:', userData.phone || userData.phone_number || userData.mobile);
+
+            // Populate address form with fresh data
+            setAddressForm(prev => ({
+              ...prev,
+              fullName: fullName || '',
+              email: userData.email || '',
+              phone: phone || '',
+              address: userData.address || '',
+              city: userData.city || '',
+              state: userData.state || '',
+              pincode: userData.pincode || userData.postal_code || userData.zip_code || '',
+            }));
+            
+            console.log('Address form populated with:', {
+              fullName: fullName || '',
+              email: userData.email || '',
+              phone: phone || '',
+              address: userData.address || '',
+              city: userData.city || '',
+              state: userData.state || '',
+              pincode: userData.pincode || userData.postal_code || userData.zip_code || '',
+            });
+            
+            // Update localStorage with fresh data
+            localStorage.setItem('user_data', JSON.stringify(userData));
+            
+            setIsAddressEditable(false); // Start with non-editable for logged-in users
+            showSuccess('Address details loaded from your account. Click "Edit Address" to modify.');
+          } else {
+            // No user data found
+            setIsAddressEditable(true);
+            showWarning('Could not load your profile data. Please fill in the details manually.');
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          setIsAddressEditable(true);
+          
+          if (error.response?.status === 401) {
+            showError('Session expired. Please sign in again to load your address details.');
+          } else if (error.response?.status === 404) {
+            showWarning('Profile not found. Please fill in your address details.');
+          } else {
+            showError('Could not load your address details. Please fill them manually or try again.');
+          }
+        } finally {
+          setIsLoadingUserData(false);
+        }
+      } else {
+        setIsAddressEditable(true); // Always editable for non-logged-in users
+      }
+    };
+
+    // Only load user data when we reach the address step
+    if (currentStep === 'address') {
+      loadUserData();
+    }
+  }, [currentStep, showInfo, showError, showSuccess, showWarning]);
 
   // Payment form state
   const [paymentMethod, setPaymentMethod] = useState('card'); // card, upi, cod
@@ -44,6 +151,12 @@ const Cart = () => {
     setDiscountCode('');
   };
 
+  const generateOrderNumber = () => {
+    // Generate a simple order number based on timestamp
+    const timestamp = Date.now();
+    return `S${timestamp.toString().slice(-6)}`;
+  };
+
   const applyDiscount = async () => {
     if (!discountCode.trim()) return;
 
@@ -62,12 +175,13 @@ const Cart = () => {
           ...discount
         });
         setDiscountMessage(`You have successfully applied the following code: ${discountCode.toUpperCase()}`);
+        showSuccess(`Discount applied! You saved with ${discountCode.toUpperCase()}`);
       } else {
-        alert('Invalid discount code');
+        showError('Invalid discount code. Please check and try again.');
       }
     } catch (error) {
       console.error('Error applying discount:', error);
-      alert('Error applying discount code');
+      showError('Error applying discount code. Please try again.');
     }
   };
 
@@ -126,28 +240,28 @@ const Cart = () => {
     const missingFields = required.filter(field => !addressForm[field].trim());
     
     if (missingFields.length > 0) {
-      alert(`Please fill the following required fields: ${missingFields.join(', ')}`);
+      showError(`Please fill the following required fields: ${missingFields.join(', ')}`);
       return false;
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(addressForm.email)) {
-      alert('Please enter a valid email address');
+      showError('Please enter a valid email address');
       return false;
     }
 
     // Phone validation (10 digits)
-    const phoneRegex = /^\d{10}$/;
-    if (!phoneRegex.test(addressForm.phone.replace(/\D/g, ''))) {
-      alert('Please enter a valid 10-digit phone number');
+    const cleanPhone = addressForm.phone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      showError('Please enter a valid 10-digit phone number');
       return false;
     }
 
     // Pincode validation (6 digits)
     const pincodeRegex = /^\d{6}$/;
     if (!pincodeRegex.test(addressForm.pincode)) {
-      alert('Please enter a valid 6-digit pincode');
+      showError('Please enter a valid 6-digit pincode');
       return false;
     }
 
@@ -159,13 +273,13 @@ const Cart = () => {
     
     if (paymentMethod === 'upi') {
       if (!paymentForm.upiId.trim()) {
-        alert('Please enter your UPI ID');
+        showError('Please enter your UPI ID');
         return false;
       }
       // Basic UPI ID validation
       const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
       if (!upiRegex.test(paymentForm.upiId)) {
-        alert('Please enter a valid UPI ID (e.g., yourname@paytm)');
+        showError('Please enter a valid UPI ID (e.g., yourname@paytm)');
         return false;
       }
       return true;
@@ -176,28 +290,28 @@ const Cart = () => {
       const missingFields = requiredFields.filter(field => !paymentForm[field].trim());
       
       if (missingFields.length > 0) {
-        alert(`Please fill the following card details: ${missingFields.join(', ')}`);
+        showError(`Please fill the following card details: ${missingFields.join(', ')}`);
         return false;
       }
 
       // Card number validation (basic)
       const cardNumber = paymentForm.cardNumber.replace(/\s/g, '');
       if (cardNumber.length < 13 || cardNumber.length > 19) {
-        alert('Please enter a valid card number');
+        showError('Please enter a valid card number');
         return false;
       }
 
       // Expiry date validation (MM/YY format)
       const expiryRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
       if (!expiryRegex.test(paymentForm.expiryDate)) {
-        alert('Please enter expiry date in MM/YY format');
+        showError('Please enter expiry date in MM/YY format');
         return false;
       }
 
       // CVV validation
       const cvvRegex = /^\d{3,4}$/;
       if (!cvvRegex.test(paymentForm.cvv)) {
-        alert('Please enter a valid 3 or 4 digit CVV');
+        showError('Please enter a valid 3 or 4 digit CVV');
         return false;
       }
 
@@ -207,19 +321,23 @@ const Cart = () => {
     return false;
   };
 
-  const proceedToNextStep = () => {
+  const proceedToNextStep = async () => {
     if (currentStep === 'order') {
       if (cartItems.length === 0) {
-        alert('Your cart is empty. Please add some products first.');
+        showWarning('Your cart is empty. Please add some products first.');
         return;
       }
       setCurrentStep('address');
     } else if (currentStep === 'address') {
       if (validateAddress()) {
         setCurrentStep('payment');
+        showInfo('Address confirmed. Please select your payment method.');
       }
     } else if (currentStep === 'payment') {
       if (validatePayment()) {
+        setIsProcessingOrder(true);
+        showInfo('Processing your order... Please wait.');
+        
         // Create order summary
         const orderSummary = {
           items: cartItems,
@@ -242,15 +360,76 @@ const Cart = () => {
           appliedDiscount
         };
 
-        console.log('Order placed:', orderSummary);
-        alert(`Order placed successfully! Total: ₹${total}\n\nOrder will be delivered to:\n${addressForm.fullName}\n${addressForm.address}, ${addressForm.city}\n\nPayment Method: ${paymentMethod.toUpperCase()}`);
-        
-        // Here you would typically send the order to your backend
-        // For now, we'll just clear the cart and reset the form
-        // clearCart();
-        // setCurrentStep('order');
-        // setAddressForm({ fullName: '', email: '', phone: '', address: '', city: '', state: '', pincode: '', country: 'India' });
-        // setPaymentForm({ cardNumber: '', expiryDate: '', cvv: '', cardName: '', upiId: '' });
+        try {
+          // Simulate order processing
+          console.log('Processing order:', orderSummary);
+          
+          // Simulate API call delay
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Simulate random success/failure for demo (90% success rate)
+          const isSuccess = Math.random() > 0.1;
+          
+          if (isSuccess) {
+            // Generate order number
+            const orderNumber = generateOrderNumber();
+            console.log('Generated order number:', orderNumber);
+            
+            showSuccess('Order placed successfully! Redirecting to confirmation...');
+            
+            // Navigate to success page
+            navigate('/order-confirmation', {
+              state: { 
+                orderData: {
+                  ...orderSummary,
+                  orderNumber: orderNumber
+                }
+              }
+            });
+          } else {
+            // Simulate different types of errors
+            const errorTypes = ['payment_failed', 'network_error', 'server_error', 'inventory_error'];
+            const randomError = errorTypes[Math.floor(Math.random() * errorTypes.length)];
+            
+            showError('Order processing failed. Redirecting to error page...');
+            
+            navigate('/order-error', {
+              state: {
+                errorData: {
+                  type: randomError,
+                  details: `ERR_${Date.now().toString().slice(-6)}`,
+                  orderSummary: {
+                    itemCount: cartItems.length,
+                    total: total,
+                    paymentMethod: paymentMethod
+                  }
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Order processing error:', error);
+          
+          showError('Failed to process order. Please try again.');
+          
+          // Navigate to error page
+          navigate('/order-error', {
+            state: {
+              errorData: {
+                type: 'server_error',
+                message: 'Failed to process order. Please try again.',
+                details: error.message,
+                orderSummary: {
+                  itemCount: cartItems.length,
+                  total: total,
+                  paymentMethod: paymentMethod
+                }
+              }
+            }
+          });
+        } finally {
+          setIsProcessingOrder(false);
+        }
       }
     }
   };
@@ -277,15 +456,6 @@ const Cart = () => {
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Debug Info - Shows current cart status */}
-        {cartItems.length > 0 && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-pro">
-            <p className="text-blue-800 text-sm font-mono">
-              Debug: Cart has {cartItems.length} unique items, {getCartItemsCount()} total items
-            </p>
-          </div>
-        )}
-
         {/* Breadcrumb Steps */}
         <div className="flex items-center space-x-4 mb-8">
           {steps.map((step, index) => (
@@ -408,7 +578,7 @@ const Cart = () => {
                     <h3 className="font-display text-xl text-app-main mb-2">Your cart is empty</h3>
                     <p className="text-app-muted mb-4">Add some products to get started</p>
                     <button
-                      onClick={() => window.location.href = '/shop'}
+                      onClick={() => navigate('/shop')}
                       className="bg-app-accent text-white px-6 py-2 rounded-pro font-mono text-sm tracking-wider hover:bg-app-accent/90 transition-all duration-200"
                     >
                       Continue Shopping
@@ -421,105 +591,151 @@ const Cart = () => {
             {/* ADDRESS STEP - Address Form */}
             {currentStep === 'address' && (
               <div className="bg-app-surface rounded-pro border border-app-border p-6">
-                <h3 className="font-display text-xl font-medium text-app-main mb-6">Shipping Address</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-sans font-medium text-app-main mb-2">Full Name *</label>
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={addressForm.fullName}
-                      onChange={handleAddressChange}
-                      className="w-full px-3 py-2 border border-app-border rounded-pro bg-app-primary text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-sans font-medium text-app-main mb-2">Email *</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={addressForm.email}
-                      onChange={handleAddressChange}
-                      className="w-full px-3 py-2 border border-app-border rounded-pro bg-app-primary text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-sans font-medium text-app-main mb-2">Phone *</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={addressForm.phone}
-                      onChange={handleAddressChange}
-                      className="w-full px-3 py-2 border border-app-border rounded-pro bg-app-primary text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent"
-                      required
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-sans font-medium text-app-main mb-2">Address *</label>
-                    <textarea
-                      name="address"
-                      value={addressForm.address}
-                      onChange={handleAddressChange}
-                      rows="3"
-                      className="w-full px-3 py-2 border border-app-border rounded-pro bg-app-primary text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-sans font-medium text-app-main mb-2">City *</label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={addressForm.city}
-                      onChange={handleAddressChange}
-                      className="w-full px-3 py-2 border border-app-border rounded-pro bg-app-primary text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-sans font-medium text-app-main mb-2">State *</label>
-                    <input
-                      type="text"
-                      name="state"
-                      value={addressForm.state}
-                      onChange={handleAddressChange}
-                      className="w-full px-3 py-2 border border-app-border rounded-pro bg-app-primary text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-sans font-medium text-app-main mb-2">Pincode *</label>
-                    <input
-                      type="text"
-                      name="pincode"
-                      value={addressForm.pincode}
-                      onChange={handleAddressChange}
-                      className="w-full px-3 py-2 border border-app-border rounded-pro bg-app-primary text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-sans font-medium text-app-main mb-2">Country</label>
-                    <input
-                      type="text"
-                      name="country"
-                      value={addressForm.country}
-                      onChange={handleAddressChange}
-                      className="w-full px-3 py-2 border border-app-border rounded-pro bg-app-secondary text-app-muted"
-                      readOnly
-                    />
-                  </div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-display text-xl font-medium text-app-main">Shipping Address</h3>
+                  {tokenUtils.isAuthenticated() && !isLoadingUserData && (
+                    <button
+                      onClick={() => setIsAddressEditable(!isAddressEditable)}
+                      className="px-4 py-2 border border-app-border text-app-main rounded-pro font-sans text-sm hover:bg-app-secondary transition-colors duration-200"
+                    >
+                      {isAddressEditable ? 'Lock Address' : 'Edit Address'}
+                    </button>
+                  )}
                 </div>
+
+                {/* Loading indicator */}
+                {isLoadingUserData && (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="flex items-center space-x-3">
+                      <svg className="w-5 h-5 animate-spin text-app-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-app-muted font-sans">Loading your address details...</span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Address form - only show when not loading */}
+                {!isLoadingUserData && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-sans font-medium text-app-main mb-2">Full Name *</label>
+                      <input
+                        type="text"
+                        name="fullName"
+                        value={addressForm.fullName}
+                        onChange={handleAddressChange}
+                        disabled={!isAddressEditable}
+                        className={`w-full px-3 py-2 border border-app-border rounded-pro text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent ${
+                          isAddressEditable ? 'bg-app-primary' : 'bg-app-secondary cursor-not-allowed'
+                        }`}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-sans font-medium text-app-main mb-2">Email *</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={addressForm.email}
+                        onChange={handleAddressChange}
+                        disabled={!isAddressEditable}
+                        className={`w-full px-3 py-2 border border-app-border rounded-pro text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent ${
+                          isAddressEditable ? 'bg-app-primary' : 'bg-app-secondary cursor-not-allowed'
+                        }`}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-sans font-medium text-app-main mb-2">Phone *</label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={addressForm.phone}
+                        onChange={handleAddressChange}
+                        disabled={!isAddressEditable}
+                        className={`w-full px-3 py-2 border border-app-border rounded-pro text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent ${
+                          isAddressEditable ? 'bg-app-primary' : 'bg-app-secondary cursor-not-allowed'
+                        }`}
+                        required
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-sans font-medium text-app-main mb-2">Address *</label>
+                      <textarea
+                        name="address"
+                        value={addressForm.address}
+                        onChange={handleAddressChange}
+                        disabled={!isAddressEditable}
+                        rows="3"
+                        className={`w-full px-3 py-2 border border-app-border rounded-pro text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent ${
+                          isAddressEditable ? 'bg-app-primary' : 'bg-app-secondary cursor-not-allowed'
+                        }`}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-sans font-medium text-app-main mb-2">City *</label>
+                      <input
+                        type="text"
+                        name="city"
+                        value={addressForm.city}
+                        onChange={handleAddressChange}
+                        disabled={!isAddressEditable}
+                        className={`w-full px-3 py-2 border border-app-border rounded-pro text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent ${
+                          isAddressEditable ? 'bg-app-primary' : 'bg-app-secondary cursor-not-allowed'
+                        }`}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-sans font-medium text-app-main mb-2">State *</label>
+                      <input
+                        type="text"
+                        name="state"
+                        value={addressForm.state}
+                        onChange={handleAddressChange}
+                        disabled={!isAddressEditable}
+                        className={`w-full px-3 py-2 border border-app-border rounded-pro text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent ${
+                          isAddressEditable ? 'bg-app-primary' : 'bg-app-secondary cursor-not-allowed'
+                        }`}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-sans font-medium text-app-main mb-2">Pincode *</label>
+                      <input
+                        type="text"
+                        name="pincode"
+                        value={addressForm.pincode}
+                        onChange={handleAddressChange}
+                        disabled={!isAddressEditable}
+                        className={`w-full px-3 py-2 border border-app-border rounded-pro text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent ${
+                          isAddressEditable ? 'bg-app-primary' : 'bg-app-secondary cursor-not-allowed'
+                        }`}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-sans font-medium text-app-main mb-2">Country</label>
+                      <input
+                        type="text"
+                        name="country"
+                        value={addressForm.country}
+                        onChange={handleAddressChange}
+                        className="w-full px-3 py-2 border border-app-border rounded-pro bg-app-secondary text-app-muted cursor-not-allowed"
+                        readOnly
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -750,9 +966,23 @@ const Cart = () => {
               {/* Action Button */}
               <button
                 onClick={proceedToNextStep}
-                className="w-full bg-app-accent text-white py-3 rounded-pro font-mono text-sm tracking-widest uppercase hover:bg-app-accent/90 transition-all duration-200"
+                disabled={isProcessingOrder}
+                className={`w-full py-3 rounded-pro font-mono text-sm tracking-widest uppercase transition-all duration-200 ${
+                  isProcessingOrder
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                    : 'bg-app-accent text-white hover:bg-app-accent/90'
+                }`}
               >
-                {currentStep === 'order' ? 'Checkout' : currentStep === 'address' ? 'Continue to Payment' : 'Place Order'}
+                {isProcessingOrder ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Processing Order...</span>
+                  </div>
+                ) : (
+                  currentStep === 'order' ? 'Checkout' : currentStep === 'address' ? 'Continue to Payment' : 'Place Order'
+                )}
               </button>
             </div>
           )}
