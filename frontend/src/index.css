@@ -1,1 +1,31 @@
-@import "tailwindcss";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Core Backgrounds */
+  --color-bg-primary: #FAF9F6;      /* Premium Alabaster */
+  --color-bg-secondary: #F2F2F2;    /* Soft UI Elements */
+  --color-surface: #FFFFFF;         /* Card & Modal backgrounds */
+  
+  /* Text Colors */
+  --color-text-main: #1A1A1A;       /* High-contrast soft black */
+  --color-text-muted: #666666;      /* De-emphasized text */
+  
+  /* Brand & Actions */
+  --color-accent: #8B6212;          /* Yarrow Gold (Premium CTA) */
+  --color-accent-soft: #C4C5BA;     /* Sage (Secondary CTA) */
+  --color-border: #E0E0E0;          /* Hairline borders */
+}
+
+[data-theme='dark'] {
+  --color-bg-primary: #121212;      /* Deep Charcoal */
+  --color-bg-secondary: #1E1E1E;    /* Dark Surface */
+  --color-surface: #252525;
+  --color-text-main: #E4E4E4;       /* Cloud White */
+  --color-text-muted: #A0A0A0;
+  --color-accent: #D4AF37;          /* Lighter Metallic Gold */
+  --color-accent-soft: #4A4B45;     /* Deep Olive */
+  --color-border: #333333;
+}
