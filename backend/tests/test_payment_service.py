@@ -51,9 +51,8 @@ class TestPaymentServiceCreateRazorpayOrder:
         """Create a test customer."""
         return User.objects.create(
             email='customer@test.com',
-            role='portal',
-            first_name='Test',
-            last_name='Customer'
+            name='Test Customer',
+            role='portal'
         )
     
     @pytest.fixture
@@ -177,6 +176,9 @@ class TestPaymentServiceCreateRazorpayOrder:
     
     def test_create_order_razorpay_api_failure(self, invoice):
         """Test that ValidationError is raised when Razorpay API fails."""
+        # Get initial count
+        initial_count = Payment.objects.count()
+        
         with patch.object(PaymentService, '_get_razorpay_client') as mock_get_client:
             mock_client = MagicMock()
             mock_client.order.create.side_effect = Exception("API Error")
@@ -187,8 +189,8 @@ class TestPaymentServiceCreateRazorpayOrder:
             
             assert "Failed to create Razorpay order: API Error" in str(exc_info.value)
             
-            # Verify no payment record was created (transaction rollback)
-            assert Payment.objects.count() == 0
+            # Verify no new payment record was created (transaction rollback)
+            assert Payment.objects.count() == initial_count
     
     def test_create_order_amount_conversion_to_paise(self, invoice):
         """Test that amount is correctly converted to paise."""

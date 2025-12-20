@@ -1,0 +1,3575 @@
+openapi: 3.0.3
+info:
+  title: ApparelDesk API
+  version: 1.0.0
+  description: REST API for ApparelDesk e-commerce platform
+paths:
+  /api/accounts/signup/:
+    post:
+      operationId: accounts_signup_create
+      description: |-
+        Portal signup API endpoint.
+        Creates a User with role='portal' and an associated Contact with type='customer'.
+        Both operations are wrapped in a database transaction for atomicity.
+
+        Request body:
+        {
+            "name": "John Doe",
+            "email": "john@example.com",
+            "password": "securepassword123",
+            "mobile": "+1234567890",  // optional
+            "city": "Mumbai",  // optional
+            "state": "Maharashtra",  // optional
+            "pincode": "400001"  // optional
+        }
+
+        Returns:
+        {
+            "user": {
+                "id": 1,
+                "email": "john@example.com",
+                "name": "John Doe",
+                "role": "portal"
+            },
+            "contact": {
+                "id": 1,
+                "name": "John Doe",
+                "type": "customer",
+                "email": "john@example.com"
+            },
+            "tokens": {
+                "refresh": "...",
+                "access": "..."
+            }
+        }
+      tags:
+      - accounts
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/catalog/:
+    get:
+      operationId: catalog_list
+      description: |-
+        Public read-only ViewSet for published products.
+        No authentication required.
+
+        Provides:
+        - list: GET /api/products/catalog/
+        - retrieve: GET /api/products/catalog/{id}/
+
+        Requirements: 2.1, 2.2, 2.3, 2.4
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: product_category
+        schema:
+          type: string
+      - in: query
+        name: product_type
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductList'
+          description: ''
+  /api/catalog/{id}/:
+    get:
+      operationId: catalog_retrieve
+      description: |-
+        Public read-only ViewSet for published products.
+        No authentication required.
+
+        Provides:
+        - list: GET /api/products/catalog/
+        - retrieve: GET /api/products/catalog/{id}/
+
+        Requirements: 2.1, 2.2, 2.3, 2.4
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this product.
+        required: true
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+          description: ''
+  /api/coupons/:
+    get:
+      operationId: coupons_list
+      description: |-
+        ViewSet for Coupon CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/coupons/
+        - create: POST /api/coupons/
+        - retrieve: GET /api/coupons/{id}/
+        - update: PUT /api/coupons/{id}/
+        - partial_update: PATCH /api/coupons/{id}/
+        - destroy: DELETE /api/coupons/{id}/
+        - validate_coupon: POST /api/coupons/validate/
+        - my_coupons: GET /api/coupons/my-coupons/
+
+        Requirements: 13.1, 13.2, 13.3, 13.5
+      parameters:
+      - in: query
+        name: discount_offer
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - active
+          - cancelled
+          - expired
+          - used
+        description: |-
+          Current status of the coupon
+
+          * `active` - Active
+          * `used` - Used
+          * `expired` - Expired
+          * `cancelled` - Cancelled
+      tags:
+      - coupons
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCouponList'
+          description: ''
+    post:
+      operationId: coupons_create
+      description: |-
+        ViewSet for Coupon CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/coupons/
+        - create: POST /api/coupons/
+        - retrieve: GET /api/coupons/{id}/
+        - update: PUT /api/coupons/{id}/
+        - partial_update: PATCH /api/coupons/{id}/
+        - destroy: DELETE /api/coupons/{id}/
+        - validate_coupon: POST /api/coupons/validate/
+        - my_coupons: GET /api/coupons/my-coupons/
+
+        Requirements: 13.1, 13.2, 13.3, 13.5
+      tags:
+      - coupons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+          description: ''
+  /api/coupons/{id}/:
+    get:
+      operationId: coupons_retrieve
+      description: |-
+        ViewSet for Coupon CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/coupons/
+        - create: POST /api/coupons/
+        - retrieve: GET /api/coupons/{id}/
+        - update: PUT /api/coupons/{id}/
+        - partial_update: PATCH /api/coupons/{id}/
+        - destroy: DELETE /api/coupons/{id}/
+        - validate_coupon: POST /api/coupons/validate/
+        - my_coupons: GET /api/coupons/my-coupons/
+
+        Requirements: 13.1, 13.2, 13.3, 13.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Coupon.
+        required: true
+      tags:
+      - coupons
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+          description: ''
+    put:
+      operationId: coupons_update
+      description: |-
+        ViewSet for Coupon CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/coupons/
+        - create: POST /api/coupons/
+        - retrieve: GET /api/coupons/{id}/
+        - update: PUT /api/coupons/{id}/
+        - partial_update: PATCH /api/coupons/{id}/
+        - destroy: DELETE /api/coupons/{id}/
+        - validate_coupon: POST /api/coupons/validate/
+        - my_coupons: GET /api/coupons/my-coupons/
+
+        Requirements: 13.1, 13.2, 13.3, 13.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Coupon.
+        required: true
+      tags:
+      - coupons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+          description: ''
+    patch:
+      operationId: coupons_partial_update
+      description: |-
+        ViewSet for Coupon CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/coupons/
+        - create: POST /api/coupons/
+        - retrieve: GET /api/coupons/{id}/
+        - update: PUT /api/coupons/{id}/
+        - partial_update: PATCH /api/coupons/{id}/
+        - destroy: DELETE /api/coupons/{id}/
+        - validate_coupon: POST /api/coupons/validate/
+        - my_coupons: GET /api/coupons/my-coupons/
+
+        Requirements: 13.1, 13.2, 13.3, 13.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Coupon.
+        required: true
+      tags:
+      - coupons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCouponRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+          description: ''
+    delete:
+      operationId: coupons_destroy
+      description: |-
+        Delete a coupon only if it hasn't been used.
+
+        Requirements: 13.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Coupon.
+        required: true
+      tags:
+      - coupons
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/coupons/my-coupons/:
+    get:
+      operationId: coupons_my_coupons_retrieve
+      description: |-
+        Return coupons assigned to the authenticated user.
+        Available to all authenticated users (portal and internal).
+
+        GET /api/coupons/my-coupons/
+
+        Requirements: 13.4
+      tags:
+      - coupons
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+          description: ''
+  /api/coupons/validate_coupon/:
+    post:
+      operationId: coupons_validate_coupon_create
+      description: |-
+        Validate a coupon code for usage.
+        Available to all authenticated users.
+
+        POST /api/coupons/validate/
+
+        Expected request body:
+        {
+            "coupon_code": "DISCOUNT10"
+        }
+
+        Requirements: 7.1, 7.2, 7.3, 7.4, 7.5
+      tags:
+      - coupons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+          description: ''
+  /api/invoices/:
+    get:
+      operationId: invoices_list
+      description: |-
+        ViewSet for CustomerInvoice operations.
+        Portal users see only their invoices, internal users see all.
+
+        Provides:
+        - list: GET /api/invoices/
+        - create: POST /api/invoices/
+        - retrieve: GET /api/invoices/{id}/
+        - update: PUT /api/invoices/{id}/
+        - partial_update: PATCH /api/invoices/{id}/
+        - destroy: DELETE /api/invoices/{id}/
+        - confirm: POST /api/invoices/{id}/confirm/
+
+        Requirements: 8.1, 8.4, 8.5
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - invoices
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCustomerInvoiceList'
+          description: ''
+    post:
+      operationId: invoices_create
+      description: |-
+        Create a new customer invoice from a confirmed order using InvoiceService.
+
+        Expected request body:
+        {
+            "order_id": 1,
+            "payment_terms_days": 30  // optional, defaults to 30
+        }
+
+        Requirements: 8.1
+      tags:
+      - invoices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInvoiceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerInvoice'
+          description: ''
+  /api/invoices/{id}/:
+    get:
+      operationId: invoices_retrieve
+      description: |-
+        ViewSet for CustomerInvoice operations.
+        Portal users see only their invoices, internal users see all.
+
+        Provides:
+        - list: GET /api/invoices/
+        - create: POST /api/invoices/
+        - retrieve: GET /api/invoices/{id}/
+        - update: PUT /api/invoices/{id}/
+        - partial_update: PATCH /api/invoices/{id}/
+        - destroy: DELETE /api/invoices/{id}/
+        - confirm: POST /api/invoices/{id}/confirm/
+
+        Requirements: 8.1, 8.4, 8.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - invoices
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerInvoice'
+          description: ''
+    put:
+      operationId: invoices_update
+      description: |-
+        ViewSet for CustomerInvoice operations.
+        Portal users see only their invoices, internal users see all.
+
+        Provides:
+        - list: GET /api/invoices/
+        - create: POST /api/invoices/
+        - retrieve: GET /api/invoices/{id}/
+        - update: PUT /api/invoices/{id}/
+        - partial_update: PATCH /api/invoices/{id}/
+        - destroy: DELETE /api/invoices/{id}/
+        - confirm: POST /api/invoices/{id}/confirm/
+
+        Requirements: 8.1, 8.4, 8.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - invoices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInvoiceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerInvoice'
+          description: ''
+    patch:
+      operationId: invoices_partial_update
+      description: |-
+        ViewSet for CustomerInvoice operations.
+        Portal users see only their invoices, internal users see all.
+
+        Provides:
+        - list: GET /api/invoices/
+        - create: POST /api/invoices/
+        - retrieve: GET /api/invoices/{id}/
+        - update: PUT /api/invoices/{id}/
+        - partial_update: PATCH /api/invoices/{id}/
+        - destroy: DELETE /api/invoices/{id}/
+        - confirm: POST /api/invoices/{id}/confirm/
+
+        Requirements: 8.1, 8.4, 8.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - invoices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomerInvoiceRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerInvoice'
+          description: ''
+    delete:
+      operationId: invoices_destroy
+      description: |-
+        ViewSet for CustomerInvoice operations.
+        Portal users see only their invoices, internal users see all.
+
+        Provides:
+        - list: GET /api/invoices/
+        - create: POST /api/invoices/
+        - retrieve: GET /api/invoices/{id}/
+        - update: PUT /api/invoices/{id}/
+        - partial_update: PATCH /api/invoices/{id}/
+        - destroy: DELETE /api/invoices/{id}/
+        - confirm: POST /api/invoices/{id}/confirm/
+
+        Requirements: 8.1, 8.4, 8.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - invoices
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/invoices/{id}/confirm/:
+    post:
+      operationId: invoices_confirm_create
+      description: |-
+        Confirm a customer invoice and deduct stock.
+        Uses InvoiceService.confirm_invoice() which handles row-level locking.
+
+        POST /api/invoices/{id}/confirm/
+
+        Requirements: 8.6, 8.7, 8.8
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - invoices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerInvoiceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerInvoice'
+          description: ''
+  /api/offers/:
+    get:
+      operationId: offers_list
+      description: |-
+        ViewSet for DiscountOffer CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/offers/
+        - create: POST /api/offers/
+        - retrieve: GET /api/offers/{id}/
+        - update: PUT /api/offers/{id}/
+        - partial_update: PATCH /api/offers/{id}/
+        - destroy: DELETE /api/offers/{id}/
+        - active_offers: GET /api/offers/active/
+
+        Requirements: 12.1, 12.2, 12.4, 12.5
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - offers
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDiscountOfferList'
+          description: ''
+    post:
+      operationId: offers_create
+      description: |-
+        ViewSet for DiscountOffer CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/offers/
+        - create: POST /api/offers/
+        - retrieve: GET /api/offers/{id}/
+        - update: PUT /api/offers/{id}/
+        - partial_update: PATCH /api/offers/{id}/
+        - destroy: DELETE /api/offers/{id}/
+        - active_offers: GET /api/offers/active/
+
+        Requirements: 12.1, 12.2, 12.4, 12.5
+      tags:
+      - offers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiscountOfferRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscountOffer'
+          description: ''
+  /api/offers/{id}/:
+    get:
+      operationId: offers_retrieve
+      description: |-
+        ViewSet for DiscountOffer CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/offers/
+        - create: POST /api/offers/
+        - retrieve: GET /api/offers/{id}/
+        - update: PUT /api/offers/{id}/
+        - partial_update: PATCH /api/offers/{id}/
+        - destroy: DELETE /api/offers/{id}/
+        - active_offers: GET /api/offers/active/
+
+        Requirements: 12.1, 12.2, 12.4, 12.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Discount Offer.
+        required: true
+      tags:
+      - offers
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscountOffer'
+          description: ''
+    put:
+      operationId: offers_update
+      description: |-
+        ViewSet for DiscountOffer CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/offers/
+        - create: POST /api/offers/
+        - retrieve: GET /api/offers/{id}/
+        - update: PUT /api/offers/{id}/
+        - partial_update: PATCH /api/offers/{id}/
+        - destroy: DELETE /api/offers/{id}/
+        - active_offers: GET /api/offers/active/
+
+        Requirements: 12.1, 12.2, 12.4, 12.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Discount Offer.
+        required: true
+      tags:
+      - offers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiscountOfferRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscountOffer'
+          description: ''
+    patch:
+      operationId: offers_partial_update
+      description: |-
+        ViewSet for DiscountOffer CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/offers/
+        - create: POST /api/offers/
+        - retrieve: GET /api/offers/{id}/
+        - update: PUT /api/offers/{id}/
+        - partial_update: PATCH /api/offers/{id}/
+        - destroy: DELETE /api/offers/{id}/
+        - active_offers: GET /api/offers/active/
+
+        Requirements: 12.1, 12.2, 12.4, 12.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Discount Offer.
+        required: true
+      tags:
+      - offers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDiscountOfferRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscountOffer'
+          description: ''
+    delete:
+      operationId: offers_destroy
+      description: |-
+        Delete a discount offer only if no coupons reference it.
+
+        Requirements: 12.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Discount Offer.
+        required: true
+      tags:
+      - offers
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/offers/active_offers/:
+    get:
+      operationId: offers_active_offers_retrieve
+      description: |-
+        Return currently active discount offers.
+        Available to all users without authentication.
+
+        GET /api/offers/active/
+
+        Filters offers by current date range (start_date <= today <= end_date).
+
+        Requirements: 12.3
+      tags:
+      - offers
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscountOffer'
+          description: ''
+  /api/orders/:
+    get:
+      operationId: orders_list
+      description: |-
+        ViewSet for SaleOrder operations.
+        Portal users see only their orders, internal users see all.
+
+        Provides:
+        - list: GET /api/orders/
+        - create: POST /api/orders/
+        - retrieve: GET /api/orders/{id}/
+        - update: PUT /api/orders/{id}/
+        - partial_update: PATCH /api/orders/{id}/
+        - destroy: DELETE /api/orders/{id}/
+        - confirm: POST /api/orders/{id}/confirm/
+        - cancel: POST /api/orders/{id}/cancel/
+        - apply_coupon: POST /api/orders/{id}/apply-coupon/
+
+        Requirements: 3.1, 3.6, 4.1, 4.2, 4.3, 4.4, 4.5
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - orders
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSaleOrderList'
+          description: ''
+    post:
+      operationId: orders_create
+      description: |-
+        Create a new sale order using SaleOrderService.
+
+        Expected request body:
+        {
+            "line_items": [
+                {"product_id": 1, "quantity": 2},
+                {"product_id": 2, "quantity": 1}
+            ],
+            "coupon_code": "OPTIONAL_COUPON"  // optional
+        }
+
+        Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaleOrderRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleOrder'
+          description: ''
+  /api/orders/{id}/:
+    get:
+      operationId: orders_retrieve
+      description: |-
+        ViewSet for SaleOrder operations.
+        Portal users see only their orders, internal users see all.
+
+        Provides:
+        - list: GET /api/orders/
+        - create: POST /api/orders/
+        - retrieve: GET /api/orders/{id}/
+        - update: PUT /api/orders/{id}/
+        - partial_update: PATCH /api/orders/{id}/
+        - destroy: DELETE /api/orders/{id}/
+        - confirm: POST /api/orders/{id}/confirm/
+        - cancel: POST /api/orders/{id}/cancel/
+        - apply_coupon: POST /api/orders/{id}/apply-coupon/
+
+        Requirements: 3.1, 3.6, 4.1, 4.2, 4.3, 4.4, 4.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - orders
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleOrder'
+          description: ''
+    put:
+      operationId: orders_update
+      description: |-
+        ViewSet for SaleOrder operations.
+        Portal users see only their orders, internal users see all.
+
+        Provides:
+        - list: GET /api/orders/
+        - create: POST /api/orders/
+        - retrieve: GET /api/orders/{id}/
+        - update: PUT /api/orders/{id}/
+        - partial_update: PATCH /api/orders/{id}/
+        - destroy: DELETE /api/orders/{id}/
+        - confirm: POST /api/orders/{id}/confirm/
+        - cancel: POST /api/orders/{id}/cancel/
+        - apply_coupon: POST /api/orders/{id}/apply-coupon/
+
+        Requirements: 3.1, 3.6, 4.1, 4.2, 4.3, 4.4, 4.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaleOrderRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleOrder'
+          description: ''
+    patch:
+      operationId: orders_partial_update
+      description: |-
+        ViewSet for SaleOrder operations.
+        Portal users see only their orders, internal users see all.
+
+        Provides:
+        - list: GET /api/orders/
+        - create: POST /api/orders/
+        - retrieve: GET /api/orders/{id}/
+        - update: PUT /api/orders/{id}/
+        - partial_update: PATCH /api/orders/{id}/
+        - destroy: DELETE /api/orders/{id}/
+        - confirm: POST /api/orders/{id}/confirm/
+        - cancel: POST /api/orders/{id}/cancel/
+        - apply_coupon: POST /api/orders/{id}/apply-coupon/
+
+        Requirements: 3.1, 3.6, 4.1, 4.2, 4.3, 4.4, 4.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSaleOrderRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleOrder'
+          description: ''
+    delete:
+      operationId: orders_destroy
+      description: |-
+        ViewSet for SaleOrder operations.
+        Portal users see only their orders, internal users see all.
+
+        Provides:
+        - list: GET /api/orders/
+        - create: POST /api/orders/
+        - retrieve: GET /api/orders/{id}/
+        - update: PUT /api/orders/{id}/
+        - partial_update: PATCH /api/orders/{id}/
+        - destroy: DELETE /api/orders/{id}/
+        - confirm: POST /api/orders/{id}/confirm/
+        - cancel: POST /api/orders/{id}/cancel/
+        - apply_coupon: POST /api/orders/{id}/apply-coupon/
+
+        Requirements: 3.1, 3.6, 4.1, 4.2, 4.3, 4.4, 4.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - orders
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/orders/{id}/apply-coupon/:
+    post:
+      operationId: orders_apply_coupon_create
+      description: |-
+        Apply a coupon code to a sale order.
+        Validates coupon, recalculates totals, and marks coupon as used.
+
+        POST /api/orders/{id}/apply-coupon/
+
+        Expected request body:
+        {
+            "coupon_code": "DISCOUNT10"
+        }
+
+        Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaleOrderRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleOrder'
+          description: ''
+  /api/orders/{id}/cancel/:
+    post:
+      operationId: orders_cancel_create
+      description: |-
+        Cancel a sale order.
+        Validates state transition.
+
+        POST /api/orders/{id}/cancel/
+
+        Requirements: 5.2, 5.3
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaleOrderRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleOrder'
+          description: ''
+  /api/orders/{id}/confirm/:
+    post:
+      operationId: orders_confirm_create
+      description: |-
+        Confirm a sale order.
+        Validates state transition and optionally generates invoice if automatic_invoicing is enabled.
+
+        POST /api/orders/{id}/confirm/
+
+        Requirements: 5.1, 5.2, 5.4, 5.5, 20.1, 20.2, 20.3
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaleOrderRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaleOrder'
+          description: ''
+  /api/payment-terms/:
+    get:
+      operationId: payment_terms_list
+      description: |-
+        ViewSet for PaymentTerm CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/payment-terms/
+        - create: POST /api/payment-terms/
+        - retrieve: GET /api/payment-terms/{id}/
+        - update: PUT /api/payment-terms/{id}/
+        - partial_update: PATCH /api/payment-terms/{id}/
+        - destroy: DELETE /api/payment-terms/{id}/
+        - default_term: GET /api/payment-terms/default/
+
+        Requirements: 14.1, 14.2, 14.4, 14.5
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - payment-terms
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentTermList'
+          description: ''
+    post:
+      operationId: payment_terms_create
+      description: |-
+        ViewSet for PaymentTerm CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/payment-terms/
+        - create: POST /api/payment-terms/
+        - retrieve: GET /api/payment-terms/{id}/
+        - update: PUT /api/payment-terms/{id}/
+        - partial_update: PATCH /api/payment-terms/{id}/
+        - destroy: DELETE /api/payment-terms/{id}/
+        - default_term: GET /api/payment-terms/default/
+
+        Requirements: 14.1, 14.2, 14.4, 14.5
+      tags:
+      - payment-terms
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentTermRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentTerm'
+          description: ''
+  /api/payment-terms/{id}/:
+    get:
+      operationId: payment_terms_retrieve
+      description: |-
+        ViewSet for PaymentTerm CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/payment-terms/
+        - create: POST /api/payment-terms/
+        - retrieve: GET /api/payment-terms/{id}/
+        - update: PUT /api/payment-terms/{id}/
+        - partial_update: PATCH /api/payment-terms/{id}/
+        - destroy: DELETE /api/payment-terms/{id}/
+        - default_term: GET /api/payment-terms/default/
+
+        Requirements: 14.1, 14.2, 14.4, 14.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Payment Term.
+        required: true
+      tags:
+      - payment-terms
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentTerm'
+          description: ''
+    put:
+      operationId: payment_terms_update
+      description: |-
+        ViewSet for PaymentTerm CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/payment-terms/
+        - create: POST /api/payment-terms/
+        - retrieve: GET /api/payment-terms/{id}/
+        - update: PUT /api/payment-terms/{id}/
+        - partial_update: PATCH /api/payment-terms/{id}/
+        - destroy: DELETE /api/payment-terms/{id}/
+        - default_term: GET /api/payment-terms/default/
+
+        Requirements: 14.1, 14.2, 14.4, 14.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Payment Term.
+        required: true
+      tags:
+      - payment-terms
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentTermRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentTerm'
+          description: ''
+    patch:
+      operationId: payment_terms_partial_update
+      description: |-
+        ViewSet for PaymentTerm CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/payment-terms/
+        - create: POST /api/payment-terms/
+        - retrieve: GET /api/payment-terms/{id}/
+        - update: PUT /api/payment-terms/{id}/
+        - partial_update: PATCH /api/payment-terms/{id}/
+        - destroy: DELETE /api/payment-terms/{id}/
+        - default_term: GET /api/payment-terms/default/
+
+        Requirements: 14.1, 14.2, 14.4, 14.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Payment Term.
+        required: true
+      tags:
+      - payment-terms
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentTermRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentTerm'
+          description: ''
+    delete:
+      operationId: payment_terms_destroy
+      description: |-
+        ViewSet for PaymentTerm CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/payment-terms/
+        - create: POST /api/payment-terms/
+        - retrieve: GET /api/payment-terms/{id}/
+        - update: PUT /api/payment-terms/{id}/
+        - partial_update: PATCH /api/payment-terms/{id}/
+        - destroy: DELETE /api/payment-terms/{id}/
+        - default_term: GET /api/payment-terms/default/
+
+        Requirements: 14.1, 14.2, 14.4, 14.5
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Payment Term.
+        required: true
+      tags:
+      - payment-terms
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/payment-terms/default_term/:
+    get:
+      operationId: payment_terms_default_term_retrieve
+      description: |-
+        Return the default payment term.
+        Available to all users without authentication.
+
+        GET /api/payment-terms/default/
+
+        Requirements: 14.3
+      tags:
+      - payment-terms
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentTerm'
+          description: ''
+  /api/payments/:
+    get:
+      operationId: payments_list
+      description: |-
+        ViewSet for Payment operations.
+        Portal users see only their payments, internal users see all.
+
+        Provides:
+        - list: GET /api/payments/
+        - create: POST /api/payments/
+        - retrieve: GET /api/payments/{id}/
+        - update: PUT /api/payments/{id}/
+        - partial_update: PATCH /api/payments/{id}/
+        - destroy: DELETE /api/payments/{id}/
+        - create_razorpay_order: POST /api/payments/create-order/
+        - verify_payment: POST /api/payments/verify/
+
+        Requirements: 11.1, 11.2, 11.3, 11.4
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentList'
+          description: ''
+    post:
+      operationId: payments_create
+      description: |-
+        ViewSet for Payment operations.
+        Portal users see only their payments, internal users see all.
+
+        Provides:
+        - list: GET /api/payments/
+        - create: POST /api/payments/
+        - retrieve: GET /api/payments/{id}/
+        - update: PUT /api/payments/{id}/
+        - partial_update: PATCH /api/payments/{id}/
+        - destroy: DELETE /api/payments/{id}/
+        - create_razorpay_order: POST /api/payments/create-order/
+        - verify_payment: POST /api/payments/verify/
+
+        Requirements: 11.1, 11.2, 11.3, 11.4
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+  /api/payments/{id}/:
+    get:
+      operationId: payments_retrieve
+      description: |-
+        ViewSet for Payment operations.
+        Portal users see only their payments, internal users see all.
+
+        Provides:
+        - list: GET /api/payments/
+        - create: POST /api/payments/
+        - retrieve: GET /api/payments/{id}/
+        - update: PUT /api/payments/{id}/
+        - partial_update: PATCH /api/payments/{id}/
+        - destroy: DELETE /api/payments/{id}/
+        - create_razorpay_order: POST /api/payments/create-order/
+        - verify_payment: POST /api/payments/verify/
+
+        Requirements: 11.1, 11.2, 11.3, 11.4
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+    put:
+      operationId: payments_update
+      description: |-
+        ViewSet for Payment operations.
+        Portal users see only their payments, internal users see all.
+
+        Provides:
+        - list: GET /api/payments/
+        - create: POST /api/payments/
+        - retrieve: GET /api/payments/{id}/
+        - update: PUT /api/payments/{id}/
+        - partial_update: PATCH /api/payments/{id}/
+        - destroy: DELETE /api/payments/{id}/
+        - create_razorpay_order: POST /api/payments/create-order/
+        - verify_payment: POST /api/payments/verify/
+
+        Requirements: 11.1, 11.2, 11.3, 11.4
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+    patch:
+      operationId: payments_partial_update
+      description: |-
+        ViewSet for Payment operations.
+        Portal users see only their payments, internal users see all.
+
+        Provides:
+        - list: GET /api/payments/
+        - create: POST /api/payments/
+        - retrieve: GET /api/payments/{id}/
+        - update: PUT /api/payments/{id}/
+        - partial_update: PATCH /api/payments/{id}/
+        - destroy: DELETE /api/payments/{id}/
+        - create_razorpay_order: POST /api/payments/create-order/
+        - verify_payment: POST /api/payments/verify/
+
+        Requirements: 11.1, 11.2, 11.3, 11.4
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPaymentRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+    delete:
+      operationId: payments_destroy
+      description: |-
+        ViewSet for Payment operations.
+        Portal users see only their payments, internal users see all.
+
+        Provides:
+        - list: GET /api/payments/
+        - create: POST /api/payments/
+        - retrieve: GET /api/payments/{id}/
+        - update: PUT /api/payments/{id}/
+        - partial_update: PATCH /api/payments/{id}/
+        - destroy: DELETE /api/payments/{id}/
+        - create_razorpay_order: POST /api/payments/create-order/
+        - verify_payment: POST /api/payments/verify/
+
+        Requirements: 11.1, 11.2, 11.3, 11.4
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - payments
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/payments/create-order/:
+    post:
+      operationId: payments_create_order_create
+      description: |-
+        Create a Razorpay order for invoice payment.
+        Uses PaymentService.create_razorpay_order().
+
+        POST /api/payments/create-order/
+
+        Expected request body:
+        {
+            "invoice_id": 1
+        }
+
+        Returns:
+        {
+            "payment_id": 1,
+            "razorpay_order_id": "order_xxx",
+            "amount": 1000.00,
+            "currency": "INR"
+        }
+
+        Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+  /api/payments/verify_payment/:
+    post:
+      operationId: payments_verify_payment_create
+      description: |-
+        Verify Razorpay payment signature and update payment record.
+        Uses PaymentService.verify_razorpay_payment().
+
+        POST /api/payments/verify/
+
+        Expected request body:
+        {
+            "payment_id": 1,
+            "razorpay_payment_id": "pay_xxx",
+            "razorpay_signature": "signature_xxx"
+        }
+
+        Returns:
+        {
+            "message": "Payment verified successfully",
+            "payment": {...}
+        }
+
+        Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
+      tags:
+      - payments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+          description: ''
+  /api/products/:
+    get:
+      operationId: products_list
+      description: |-
+        ViewSet for Product CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/products/
+        - create: POST /api/products/
+        - retrieve: GET /api/products/{id}/
+        - update: PUT /api/products/{id}/
+        - partial_update: PATCH /api/products/{id}/
+        - destroy: DELETE /api/products/{id}/
+
+        Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 1.8
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: product_category
+        schema:
+          type: string
+      - in: query
+        name: product_type
+        schema:
+          type: string
+      - in: query
+        name: published
+        schema:
+          type: boolean
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductList'
+          description: ''
+    post:
+      operationId: products_create
+      description: |-
+        ViewSet for Product CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/products/
+        - create: POST /api/products/
+        - retrieve: GET /api/products/{id}/
+        - update: PUT /api/products/{id}/
+        - partial_update: PATCH /api/products/{id}/
+        - destroy: DELETE /api/products/{id}/
+
+        Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 1.8
+      tags:
+      - products
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+          description: ''
+  /api/products/{id}/:
+    get:
+      operationId: products_retrieve
+      description: |-
+        ViewSet for Product CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/products/
+        - create: POST /api/products/
+        - retrieve: GET /api/products/{id}/
+        - update: PUT /api/products/{id}/
+        - partial_update: PATCH /api/products/{id}/
+        - destroy: DELETE /api/products/{id}/
+
+        Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 1.8
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this product.
+        required: true
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+          description: ''
+    put:
+      operationId: products_update
+      description: |-
+        ViewSet for Product CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/products/
+        - create: POST /api/products/
+        - retrieve: GET /api/products/{id}/
+        - update: PUT /api/products/{id}/
+        - partial_update: PATCH /api/products/{id}/
+        - destroy: DELETE /api/products/{id}/
+
+        Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 1.8
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this product.
+        required: true
+      tags:
+      - products
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+          description: ''
+    patch:
+      operationId: products_partial_update
+      description: |-
+        ViewSet for Product CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/products/
+        - create: POST /api/products/
+        - retrieve: GET /api/products/{id}/
+        - update: PUT /api/products/{id}/
+        - partial_update: PATCH /api/products/{id}/
+        - destroy: DELETE /api/products/{id}/
+
+        Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 1.8
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this product.
+        required: true
+      tags:
+      - products
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProductRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+          description: ''
+    delete:
+      operationId: products_destroy
+      description: |-
+        ViewSet for Product CRUD operations.
+        Internal users only.
+
+        Provides:
+        - list: GET /api/products/
+        - create: POST /api/products/
+        - retrieve: GET /api/products/{id}/
+        - update: PUT /api/products/{id}/
+        - partial_update: PATCH /api/products/{id}/
+        - destroy: DELETE /api/products/{id}/
+
+        Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 1.8
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this product.
+        required: true
+      tags:
+      - products
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/settings/:
+    get:
+      operationId: settings_list
+      description: |-
+        Return the singleton system settings instance.
+        This acts as both list and retrieve since there's only one instance.
+
+        GET /api/settings/
+
+        Requirements: 15.1
+      tags:
+      - settings
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SystemSettings'
+          description: ''
+  /api/settings/{id}/:
+    get:
+      operationId: settings_retrieve
+      description: |-
+        Return the singleton system settings instance.
+        The pk parameter is ignored since there's only one instance.
+
+        GET /api/settings/{id}/
+
+        Requirements: 15.1
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - settings
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+          description: ''
+    put:
+      operationId: settings_update
+      description: |-
+        Update the singleton system settings instance.
+        The pk parameter is ignored since there's only one instance.
+
+        PUT /api/settings/{id}/
+
+        Requirements: 15.2, 15.3
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemSettingsRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+          description: ''
+    patch:
+      operationId: settings_partial_update
+      description: |-
+        Partially update the singleton system settings instance.
+        The pk parameter is ignored since there's only one instance.
+
+        PATCH /api/settings/{id}/
+
+        Requirements: 15.2, 15.3
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSystemSettingsRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+          description: ''
+  /api/token/:
+    post:
+      operationId: token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/token/refresh/:
+    post:
+      operationId: token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+components:
+  schemas:
+    BlankEnum:
+      enum:
+      - ''
+    Coupon:
+      type: object
+      description: |-
+        Serializer for Coupon model.
+        Includes discount_percentage from related offer and validates coupon code format.
+
+        Requirements: 7.1, 7.2, 13.1, 13.2
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          description: Unique coupon code
+          pattern: ^[A-Za-z0-9_-]+$
+          maxLength: 50
+        expiration_date:
+          type: string
+          format: date
+          description: Date when coupon expires
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CouponStatusEnum'
+          description: |-
+            Current status of the coupon
+
+            * `active` - Active
+            * `used` - Used
+            * `expired` - Expired
+            * `cancelled` - Cancelled
+        contact:
+          type: integer
+          nullable: true
+          description: 'Optional: Assign coupon to specific contact'
+        discount_offer:
+          type: integer
+          description: Linked discount offer
+        discount_offer_name:
+          type: string
+          readOnly: true
+        discount_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - code
+      - created_at
+      - discount_offer
+      - discount_offer_name
+      - discount_percentage
+      - expiration_date
+      - id
+      - updated_at
+    CouponRequest:
+      type: object
+      description: |-
+        Serializer for Coupon model.
+        Includes discount_percentage from related offer and validates coupon code format.
+
+        Requirements: 7.1, 7.2, 13.1, 13.2
+      properties:
+        code:
+          type: string
+          minLength: 1
+          description: Unique coupon code
+          pattern: ^[A-Za-z0-9_-]+$
+          maxLength: 50
+        expiration_date:
+          type: string
+          format: date
+          description: Date when coupon expires
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CouponStatusEnum'
+          description: |-
+            Current status of the coupon
+
+            * `active` - Active
+            * `used` - Used
+            * `expired` - Expired
+            * `cancelled` - Cancelled
+        contact:
+          type: integer
+          nullable: true
+          description: 'Optional: Assign coupon to specific contact'
+        discount_offer:
+          type: integer
+          description: Linked discount offer
+      required:
+      - code
+      - discount_offer
+      - expiration_date
+    CouponStatusEnum:
+      enum:
+      - active
+      - used
+      - expired
+      - cancelled
+      type: string
+      description: |-
+        * `active` - Active
+        * `used` - Used
+        * `expired` - Expired
+        * `cancelled` - Cancelled
+    CustomerInvoice:
+      type: object
+      description: |-
+        Serializer for CustomerInvoice model.
+        Includes order_id and customer_email for display purposes.
+        Read-only fields for calculated amounts.
+
+        Requirements: 8.1, 8.2, 8.3
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        order:
+          type: integer
+          description: Source sale order for this invoice
+        order_id:
+          type: integer
+          readOnly: true
+        customer_email:
+          type: string
+          format: email
+          readOnly: true
+        invoice_date:
+          type: string
+          format: date
+          readOnly: true
+          description: Date when invoice was created
+        due_date:
+          type: string
+          format: date
+          description: Payment due date
+        total_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          description: Total invoice amount (copied from order)
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusF46Enum'
+          description: |-
+            Current status of the invoice
+
+            * `draft` - Draft
+            * `confirmed` - Confirmed
+            * `cancelled` - Cancelled
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - customer_email
+      - due_date
+      - id
+      - invoice_date
+      - order
+      - order_id
+      - total_amount
+      - updated_at
+    CustomerInvoiceRequest:
+      type: object
+      description: |-
+        Serializer for CustomerInvoice model.
+        Includes order_id and customer_email for display purposes.
+        Read-only fields for calculated amounts.
+
+        Requirements: 8.1, 8.2, 8.3
+      properties:
+        order:
+          type: integer
+          description: Source sale order for this invoice
+        due_date:
+          type: string
+          format: date
+          description: Payment due date
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusF46Enum'
+          description: |-
+            Current status of the invoice
+
+            * `draft` - Draft
+            * `confirmed` - Confirmed
+            * `cancelled` - Cancelled
+      required:
+      - due_date
+      - order
+    DiscountOffer:
+      type: object
+      description: |-
+        Serializer for DiscountOffer model.
+        Includes all discount offer fields with validation for date range.
+
+        Requirements: 7.1, 7.2, 13.1, 13.2
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          description: Unique name for the discount offer
+          maxLength: 255
+        discount_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          description: Discount percentage (0-100)
+        start_date:
+          type: string
+          format: date
+          description: Campaign start date
+        end_date:
+          type: string
+          format: date
+          description: Campaign end date
+        available_on:
+          type: string
+          nullable: true
+          description: 'Comma-separated days: Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
+          maxLength: 255
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - discount_percentage
+      - end_date
+      - id
+      - name
+      - start_date
+      - updated_at
+    DiscountOfferRequest:
+      type: object
+      description: |-
+        Serializer for DiscountOffer model.
+        Includes all discount offer fields with validation for date range.
+
+        Requirements: 7.1, 7.2, 13.1, 13.2
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Unique name for the discount offer
+          maxLength: 255
+        discount_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          description: Discount percentage (0-100)
+        start_date:
+          type: string
+          format: date
+          description: Campaign start date
+        end_date:
+          type: string
+          format: date
+          description: Campaign end date
+        available_on:
+          type: string
+          nullable: true
+          description: 'Comma-separated days: Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
+          maxLength: 255
+      required:
+      - discount_percentage
+      - end_date
+      - name
+      - start_date
+    EarlyPayDiscountComputationEnum:
+      enum:
+      - percentage_of_total
+      - fixed_amount
+      type: string
+      description: |-
+        * `percentage_of_total` - Percentage of Total Amount
+        * `fixed_amount` - Fixed Amount Discount
+    MethodEnum:
+      enum:
+      - razorpay
+      - cash
+      - bank_transfer
+      - cheque
+      type: string
+      description: |-
+        * `razorpay` - Razorpay
+        * `cash` - Cash
+        * `bank_transfer` - Bank Transfer
+        * `cheque` - Cheque
+    NullEnum:
+      enum:
+      - null
+    PaginatedCouponList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Coupon'
+    PaginatedCustomerInvoiceList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerInvoice'
+    PaginatedDiscountOfferList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscountOffer'
+    PaginatedPaymentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+    PaginatedPaymentTermList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentTerm'
+    PaginatedProductList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+    PaginatedSaleOrderList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SaleOrder'
+    PatchedCouponRequest:
+      type: object
+      description: |-
+        Serializer for Coupon model.
+        Includes discount_percentage from related offer and validates coupon code format.
+
+        Requirements: 7.1, 7.2, 13.1, 13.2
+      properties:
+        code:
+          type: string
+          minLength: 1
+          description: Unique coupon code
+          pattern: ^[A-Za-z0-9_-]+$
+          maxLength: 50
+        expiration_date:
+          type: string
+          format: date
+          description: Date when coupon expires
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CouponStatusEnum'
+          description: |-
+            Current status of the coupon
+
+            * `active` - Active
+            * `used` - Used
+            * `expired` - Expired
+            * `cancelled` - Cancelled
+        contact:
+          type: integer
+          nullable: true
+          description: 'Optional: Assign coupon to specific contact'
+        discount_offer:
+          type: integer
+          description: Linked discount offer
+    PatchedCustomerInvoiceRequest:
+      type: object
+      description: |-
+        Serializer for CustomerInvoice model.
+        Includes order_id and customer_email for display purposes.
+        Read-only fields for calculated amounts.
+
+        Requirements: 8.1, 8.2, 8.3
+      properties:
+        order:
+          type: integer
+          description: Source sale order for this invoice
+        due_date:
+          type: string
+          format: date
+          description: Payment due date
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusF46Enum'
+          description: |-
+            Current status of the invoice
+
+            * `draft` - Draft
+            * `confirmed` - Confirmed
+            * `cancelled` - Cancelled
+    PatchedDiscountOfferRequest:
+      type: object
+      description: |-
+        Serializer for DiscountOffer model.
+        Includes all discount offer fields with validation for date range.
+
+        Requirements: 7.1, 7.2, 13.1, 13.2
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Unique name for the discount offer
+          maxLength: 255
+        discount_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          description: Discount percentage (0-100)
+        start_date:
+          type: string
+          format: date
+          description: Campaign start date
+        end_date:
+          type: string
+          format: date
+          description: Campaign end date
+        available_on:
+          type: string
+          nullable: true
+          description: 'Comma-separated days: Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
+          maxLength: 255
+    PatchedPaymentRequest:
+      type: object
+      description: |-
+        Serializer for Payment model.
+        Includes all payment fields with validation for Razorpay fields.
+
+        Requirements: 9.1, 10.1, 10.4, 10.5
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          description: Payment amount (must be positive)
+        payment_date:
+          type: string
+          format: date-time
+          description: Date and time when payment was made
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          description: |-
+            Payment method used
+
+            * `razorpay` - Razorpay
+            * `cash` - Cash
+            * `bank_transfer` - Bank Transfer
+            * `cheque` - Cheque
+        customer_invoice:
+          type: integer
+          nullable: true
+          description: Customer invoice this payment is for
+        vendor_bill:
+          type: integer
+          nullable: true
+          description: Vendor bill this payment is for
+        razorpay_order_id:
+          type: string
+          nullable: true
+          description: Razorpay order ID
+          maxLength: 255
+        razorpay_payment_id:
+          type: string
+          nullable: true
+          description: Razorpay payment ID
+          maxLength: 255
+        razorpay_signature:
+          type: string
+          nullable: true
+          description: Razorpay signature for verification
+          maxLength: 512
+    PatchedPaymentTermRequest:
+      type: object
+      description: Serializer for PaymentTerm model with validation for early payment
+        discount logic.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Unique name for the payment term
+          maxLength: 255
+        early_payment_discount:
+          type: boolean
+          description: Whether this term offers early payment discounts
+        discount_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          description: Discount percentage (0-100)
+        discount_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Number of days to qualify for early payment discount
+        early_pay_discount_computation:
+          nullable: true
+          description: |-
+            Method to calculate early payment discount
+
+            * `percentage_of_total` - Percentage of Total Amount
+            * `fixed_amount` - Fixed Amount Discount
+          oneOf:
+          - $ref: '#/components/schemas/EarlyPayDiscountComputationEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        example_preview:
+          type: string
+          nullable: true
+          description: Example showing how this payment term works
+        is_default:
+          type: boolean
+          description: Whether this is the default payment term
+    PatchedProductRequest:
+      type: object
+      description: |-
+        Serializer for Product model with nested colors.
+        Includes all product fields and read-only fields for id and created_at.
+
+        Requirements: 1.1, 1.3
+      properties:
+        product_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        product_category:
+          type: string
+          minLength: 1
+          maxLength: 100
+        product_type:
+          type: string
+          minLength: 1
+          maxLength: 50
+        material:
+          type: string
+          nullable: true
+          maxLength: 100
+        sales_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        sales_tax_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        purchase_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        purchase_tax_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        current_stock:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        published:
+          type: boolean
+    PatchedSaleOrderRequest:
+      type: object
+      description: |-
+        Serializer for SaleOrder model with nested line items.
+        Includes customer email and calculated totals as read-only fields.
+
+        Requirements: 3.1, 3.2, 3.3
+      properties:
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusF46Enum'
+          description: |-
+            Current status of the order
+
+            * `draft` - Draft
+            * `confirmed` - Confirmed
+            * `cancelled` - Cancelled
+        applied_coupon:
+          type: integer
+          nullable: true
+          description: Coupon applied to this order
+    PatchedSystemSettingsRequest:
+      type: object
+      description: |-
+        Serializer for SystemSettings model.
+        Includes automatic_invoicing field for system-wide configuration.
+
+        Requirements: 15.1, 15.2
+      properties:
+        automatic_invoicing:
+          type: boolean
+          description: Enable automatic invoice generation from confirmed orders
+    Payment:
+      type: object
+      description: |-
+        Serializer for Payment model.
+        Includes all payment fields with validation for Razorpay fields.
+
+        Requirements: 9.1, 10.1, 10.4, 10.5
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          description: Payment amount (must be positive)
+        payment_date:
+          type: string
+          format: date-time
+          description: Date and time when payment was made
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          description: |-
+            Payment method used
+
+            * `razorpay` - Razorpay
+            * `cash` - Cash
+            * `bank_transfer` - Bank Transfer
+            * `cheque` - Cheque
+        customer_invoice:
+          type: integer
+          nullable: true
+          description: Customer invoice this payment is for
+        vendor_bill:
+          type: integer
+          nullable: true
+          description: Vendor bill this payment is for
+        razorpay_order_id:
+          type: string
+          nullable: true
+          description: Razorpay order ID
+          maxLength: 255
+        razorpay_payment_id:
+          type: string
+          nullable: true
+          description: Razorpay payment ID
+          maxLength: 255
+        razorpay_signature:
+          type: string
+          nullable: true
+          description: Razorpay signature for verification
+          maxLength: 512
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - created_at
+      - id
+      - payment_date
+      - updated_at
+    PaymentRequest:
+      type: object
+      description: |-
+        Serializer for Payment model.
+        Includes all payment fields with validation for Razorpay fields.
+
+        Requirements: 9.1, 10.1, 10.4, 10.5
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          description: Payment amount (must be positive)
+        payment_date:
+          type: string
+          format: date-time
+          description: Date and time when payment was made
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          description: |-
+            Payment method used
+
+            * `razorpay` - Razorpay
+            * `cash` - Cash
+            * `bank_transfer` - Bank Transfer
+            * `cheque` - Cheque
+        customer_invoice:
+          type: integer
+          nullable: true
+          description: Customer invoice this payment is for
+        vendor_bill:
+          type: integer
+          nullable: true
+          description: Vendor bill this payment is for
+        razorpay_order_id:
+          type: string
+          nullable: true
+          description: Razorpay order ID
+          maxLength: 255
+        razorpay_payment_id:
+          type: string
+          nullable: true
+          description: Razorpay payment ID
+          maxLength: 255
+        razorpay_signature:
+          type: string
+          nullable: true
+          description: Razorpay signature for verification
+          maxLength: 512
+      required:
+      - amount
+      - payment_date
+    PaymentTerm:
+      type: object
+      description: Serializer for PaymentTerm model with validation for early payment
+        discount logic.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          description: Unique name for the payment term
+          maxLength: 255
+        early_payment_discount:
+          type: boolean
+          description: Whether this term offers early payment discounts
+        discount_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          description: Discount percentage (0-100)
+        discount_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Number of days to qualify for early payment discount
+        early_pay_discount_computation:
+          nullable: true
+          description: |-
+            Method to calculate early payment discount
+
+            * `percentage_of_total` - Percentage of Total Amount
+            * `fixed_amount` - Fixed Amount Discount
+          oneOf:
+          - $ref: '#/components/schemas/EarlyPayDiscountComputationEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        example_preview:
+          type: string
+          nullable: true
+          description: Example showing how this payment term works
+        is_default:
+          type: boolean
+          description: Whether this is the default payment term
+        discount_description:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - discount_description
+      - id
+      - name
+      - updated_at
+    PaymentTermRequest:
+      type: object
+      description: Serializer for PaymentTerm model with validation for early payment
+        discount logic.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Unique name for the payment term
+          maxLength: 255
+        early_payment_discount:
+          type: boolean
+          description: Whether this term offers early payment discounts
+        discount_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          description: Discount percentage (0-100)
+        discount_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Number of days to qualify for early payment discount
+        early_pay_discount_computation:
+          nullable: true
+          description: |-
+            Method to calculate early payment discount
+
+            * `percentage_of_total` - Percentage of Total Amount
+            * `fixed_amount` - Fixed Amount Discount
+          oneOf:
+          - $ref: '#/components/schemas/EarlyPayDiscountComputationEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        example_preview:
+          type: string
+          nullable: true
+          description: Example showing how this payment term works
+        is_default:
+          type: boolean
+          description: Whether this is the default payment term
+      required:
+      - name
+    Product:
+      type: object
+      description: |-
+        Serializer for Product model with nested colors.
+        Includes all product fields and read-only fields for id and created_at.
+
+        Requirements: 1.1, 1.3
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        product_name:
+          type: string
+          maxLength: 255
+        product_category:
+          type: string
+          maxLength: 100
+        product_type:
+          type: string
+          maxLength: 50
+        material:
+          type: string
+          nullable: true
+          maxLength: 100
+        sales_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        sales_tax_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        purchase_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        purchase_tax_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        current_stock:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        published:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        colors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductColor'
+          readOnly: true
+      required:
+      - colors
+      - created_at
+      - id
+      - product_category
+      - product_name
+      - product_type
+      - purchase_price
+      - sales_price
+    ProductColor:
+      type: object
+      description: Serializer for ProductColor model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        color:
+          type: string
+          maxLength: 50
+      required:
+      - color
+      - id
+    ProductColorRequest:
+      type: object
+      description: Serializer for ProductColor model.
+      properties:
+        color:
+          type: string
+          minLength: 1
+          maxLength: 50
+      required:
+      - color
+    ProductRequest:
+      type: object
+      description: |-
+        Serializer for Product model with nested colors.
+        Includes all product fields and read-only fields for id and created_at.
+
+        Requirements: 1.1, 1.3
+      properties:
+        product_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        product_category:
+          type: string
+          minLength: 1
+          maxLength: 100
+        product_type:
+          type: string
+          minLength: 1
+          maxLength: 50
+        material:
+          type: string
+          nullable: true
+          maxLength: 100
+        sales_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        sales_tax_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        purchase_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        purchase_tax_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        current_stock:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        published:
+          type: boolean
+      required:
+      - product_category
+      - product_name
+      - product_type
+      - purchase_price
+      - sales_price
+    SaleOrder:
+      type: object
+      description: |-
+        Serializer for SaleOrder model with nested line items.
+        Includes customer email and calculated totals as read-only fields.
+
+        Requirements: 3.1, 3.2, 3.3
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        customer:
+          type: integer
+          readOnly: true
+          description: Customer who placed the order (must be portal user)
+        customer_email:
+          type: string
+          format: email
+          readOnly: true
+        order_date:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Date and time when order was created
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusF46Enum'
+          description: |-
+            Current status of the order
+
+            * `draft` - Draft
+            * `confirmed` - Confirmed
+            * `cancelled` - Cancelled
+        subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          description: Sum of all line item totals
+        discount_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          description: Discount amount from applied coupon
+        total_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          description: Final total after discount
+        applied_coupon:
+          type: integer
+          nullable: true
+          description: Coupon applied to this order
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/SaleOrderLine'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - customer
+      - customer_email
+      - discount_amount
+      - id
+      - lines
+      - order_date
+      - subtotal
+      - total_amount
+      - updated_at
+    SaleOrderLine:
+      type: object
+      description: |-
+        Serializer for SaleOrderLine model.
+        Includes product name for display purposes.
+
+        Requirements: 3.1, 3.2, 3.3
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        product:
+          type: integer
+          description: Product being ordered
+        product_name:
+          type: string
+          readOnly: true
+        quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          description: Quantity ordered (must be positive)
+        unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          description: Unit price at time of order (from Product.sales_price)
+        line_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          description: Line total (quantity * unit_price)
+      required:
+      - id
+      - line_total
+      - product
+      - product_name
+      - quantity
+      - unit_price
+    SaleOrderLineRequest:
+      type: object
+      description: |-
+        Serializer for SaleOrderLine model.
+        Includes product name for display purposes.
+
+        Requirements: 3.1, 3.2, 3.3
+      properties:
+        product:
+          type: integer
+          description: Product being ordered
+        quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          description: Quantity ordered (must be positive)
+      required:
+      - product
+      - quantity
+    SaleOrderRequest:
+      type: object
+      description: |-
+        Serializer for SaleOrder model with nested line items.
+        Includes customer email and calculated totals as read-only fields.
+
+        Requirements: 3.1, 3.2, 3.3
+      properties:
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusF46Enum'
+          description: |-
+            Current status of the order
+
+            * `draft` - Draft
+            * `confirmed` - Confirmed
+            * `cancelled` - Cancelled
+        applied_coupon:
+          type: integer
+          nullable: true
+          description: Coupon applied to this order
+    StatusF46Enum:
+      enum:
+      - draft
+      - confirmed
+      - cancelled
+      type: string
+      description: |-
+        * `draft` - Draft
+        * `confirmed` - Confirmed
+        * `cancelled` - Cancelled
+    SystemSettings:
+      type: object
+      description: |-
+        Serializer for SystemSettings model.
+        Includes automatic_invoicing field for system-wide configuration.
+
+        Requirements: 15.1, 15.2
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Always 1 for singleton pattern
+        automatic_invoicing:
+          type: boolean
+          description: Enable automatic invoice generation from confirmed orders
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - updated_at
+    SystemSettingsRequest:
+      type: object
+      description: |-
+        Serializer for SystemSettings model.
+        Includes automatic_invoicing field for system-wide configuration.
+
+        Requirements: 15.1, 15.2
+      properties:
+        automatic_invoicing:
+          type: boolean
+          description: Enable automatic invoice generation from confirmed orders
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - email
+      - password
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
