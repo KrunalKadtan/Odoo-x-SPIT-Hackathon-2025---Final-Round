@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\project-aarav\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\accounts\admin.py
+# hypothesis_version: 6.148.7
+
+['-created_at', 'Contact Information', 'Important dates', 'Location', 'Password', 'Personal Info', 'Portal Access', 'Role & Permissions', 'Timestamps', 'city', 'classes', 'collapse', 'created_at', 'email', 'fields', 'is_active', 'is_staff', 'is_superuser', 'last_login', 'mobile', 'name', 'password', 'password1', 'password2', 'pincode', 'role', 'state', 'type', 'updated_at', 'user', 'wide']

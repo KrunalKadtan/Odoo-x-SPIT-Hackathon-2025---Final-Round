@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\project-aarav\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\admin.py
+# hypothesis_version: 6.148.7
+
+['Basic Information', 'Timestamps', 'classes', 'collapse', 'created_at', 'description', 'discount_days', 'discount_percentage', 'error', 'example_preview', 'fields', 'is_default', 'name', 'updated_at']

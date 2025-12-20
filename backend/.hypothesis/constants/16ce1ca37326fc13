@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\project-aarav\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\models.py
+# hypothesis_version: 6.148.7
+
+[0.0, 100.0, 100, 255, 'Payment Term', 'Payment Terms', 'color', 'colors', 'discount_days', 'discount_percentage', 'fixed_amount', 'is_default', 'name', 'payment_terms', 'percentage_of_total', 'product', 'valid_discount_days']
