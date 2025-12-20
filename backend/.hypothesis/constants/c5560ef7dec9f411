@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\services.py
+# hypothesis_version: 6.148.7
+
+[100, '%A', '0.00', '0.01', '100.00', 'Coupon has expired.', 'Coupon is valid.', 'INR', 'active', 'amount', 'bank_transfer', 'cash', 'cheque', 'confirmed', 'currency', 'decrease', 'discount_offer', 'draft', 'id', 'increase', 'line_total', 'payment_capture', 'portal', 'product_id', 'quantity', 'razorpay', 'unit_price', 'utf-8']

@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\permissions.py
+# hypothesis_version: 6.148.7
+
+['customer', 'customer_invoice', 'internal', 'order']

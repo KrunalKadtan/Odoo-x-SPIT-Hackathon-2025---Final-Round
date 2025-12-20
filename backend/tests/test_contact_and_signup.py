@@ -6,6 +6,7 @@ Tests database constraints, one-to-one relationships, and transaction safety.
 import os
 import sys
 import django
+import pytest
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'appareldesk.settings')
@@ -15,6 +16,7 @@ from django.db import connection, IntegrityError, transaction
 from accounts.models import User, Contact
 
 
+@pytest.mark.django_db
 def test_contact_model():
     """Test Contact model structure and constraints."""
     

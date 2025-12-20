@@ -48,6 +48,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = [
         ('internal', 'Internal Staff'),
         ('portal', 'Portal User'),
+        ('vendor', 'Vendor User'),
     ]
     
     # Validators
@@ -122,7 +123,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name_plural = 'Users'
         constraints = [
             models.CheckConstraint(
-                check=models.Q(role__in=['internal', 'portal']),
+                check=models.Q(role__in=['internal', 'portal', 'vendor']),
                 name='valid_role'
             )
         ]

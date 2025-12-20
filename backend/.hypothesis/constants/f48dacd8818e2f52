@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\views_vendor.py
+# hypothesis_version: 6.148.7
+
+['amount', 'bill_date', 'contact', 'due_date', 'error', 'lines__product', 'material', 'method', 'order_date', 'payment_date', 'product_category', 'product_name', 'product_type', 'purchase_order', 'purchase_price', 'status', 'total_amount', 'vendor_bill']

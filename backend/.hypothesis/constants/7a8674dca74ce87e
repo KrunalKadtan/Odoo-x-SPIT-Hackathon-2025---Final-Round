@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\reports.py
+# hypothesis_version: 6.148.7
+
+[0.0, ' LIMIT %s', 'avg_order_value', 'avg_unit_price', 'summary', 'top_customers', 'top_products', 'top_vendors', 'total_cost', 'total_items_sold', 'total_orders', 'total_revenue', 'total_vendors']

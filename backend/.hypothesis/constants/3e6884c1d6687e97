@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\conftest.py
+# hypothesis_version: 6.148.7
+
+['+1234567890', '400001', '5432', 'Admin User', 'ENGINE', 'HOST', 'Maharashtra', 'Mumbai', 'NAME', 'PASSWORD', 'PORT', 'Staff User', 'Test User', 'USER', 'admin@example.com', 'adminpass123', 'appareldesk_test', 'city', 'default', 'email', 'internal', 'is_staff', 'is_superuser', 'localhost', 'mobile', 'name', 'password', 'pincode', 'portal', 'postgres', 'role', 'session', 'staff@example.com', 'staffpass123', 'state', 'test@example.com', 'testpass123']

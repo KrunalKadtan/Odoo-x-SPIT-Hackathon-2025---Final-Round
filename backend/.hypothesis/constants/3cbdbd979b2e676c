@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\accounts\serializers.py
+# hypothesis_version: 6.148.7
+
+[100, 255, 'address', 'city', 'created_at', 'email', 'id', 'mobile', 'name', 'pincode', 'role', 'state', 'type', 'user']

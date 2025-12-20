@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\exceptions.py
+# hypothesis_version: 6.148.7
+
+['CHECK constraint', 'NOT NULL constraint', 'Permission denied', 'Resource not found', 'UNIQUE constraint', 'Validation failed', 'check_constraint', 'constraint_type', 'database_error', 'detail', 'error', 'field_errors', 'get', 'message_dict', 'messages', 'not_null_constraint', 'unique_constraint']

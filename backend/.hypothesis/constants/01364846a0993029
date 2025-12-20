@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\admin_vendor_permissions.py
+# hypothesis_version: 6.148.7
+
+['contact', 'internal', 'purchase_order', 'vendor', 'vendor_bill']

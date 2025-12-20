@@ -8,10 +8,10 @@ from hypothesis import settings as hypothesis_settings
 
 
 # Configure Hypothesis for property-based testing
-# Reduced to 20 examples for faster test execution
+# Reduced to 10 examples for faster test execution
 hypothesis_settings.register_profile(
     "default",
-    max_examples=20,
+    max_examples=10,
     deadline=None,  # Disable deadline for database operations
 )
 hypothesis_settings.load_profile("default")

@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\admin.py
+# hypothesis_version: 6.148.7
+
+['Basic Information', 'Inventory', 'Pricing', 'Timestamps', 'classes', 'collapse', 'color', 'created_at', 'current_stock', 'description', 'discount_days', 'discount_percentage', 'error', 'example_preview', 'fields', 'is_default', 'material', 'name', 'product', 'product_category', 'product_name', 'product_type', 'published', 'purchase_price', 'sales_price', 'sales_tax_percentage', 'updated_at']

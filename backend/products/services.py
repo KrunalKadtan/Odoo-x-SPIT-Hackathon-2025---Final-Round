@@ -98,7 +98,10 @@ class StockUpdateService:
                 # Check for sufficient stock is implied by the DB constraint, 
                 # but good to check in app logic too for better error message.
                 if product.current_stock < quantity_change:
-                     raise ValidationError(f"Insufficient stock for product {product.product_name}. Current: {product.current_stock}, Requested: {quantity_change}")
+                    raise ValidationError(
+                        f"Insufficient stock for product {product.product_name}. "
+                        f"Current: {product.current_stock}, Requested: {quantity_change}"
+                    )
                 product.current_stock -= quantity_change
             else:
                 raise ValidationError("Invalid transaction type. Must be 'increase' or 'decrease'.")

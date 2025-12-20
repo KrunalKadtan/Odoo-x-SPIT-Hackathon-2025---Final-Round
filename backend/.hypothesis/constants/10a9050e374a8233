@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\views_admin.py
+# hypothesis_version: 6.148.7
+
+['%Y-%m-%d', '0.00', 'amount', 'bill_date', 'both', 'city', 'confirmed', 'created_at', 'current_stock', 'draft', 'due_date', 'due_date is required', 'email', 'end_date', 'error', 'get', 'limit', 'lines', 'lines__product', 'material', 'message', 'method', 'mobile', 'name', 'order_date', 'patch', 'payment_date', 'post', 'product', 'product_category', 'product_id', 'product_name', 'product_type', 'published', 'purchase_order', 'purchase_price', 'quantity', 'sales_price', 'start_date', 'state', 'status', 'tax_percentage', 'top_n', 'total_amount', 'type', 'unit_price', 'vendor', 'vendor is required', 'vendor_bill']

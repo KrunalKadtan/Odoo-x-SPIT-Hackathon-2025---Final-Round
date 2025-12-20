@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\urls.py
+# hypothesis_version: 6.148.7
+
+['<int:id>/', 'add_to_cart', 'cart', 'cart/', 'cart/add/', 'cart/clear/', 'categories/', 'checkout', 'checkout/', 'clear_cart', 'create_payment_order', 'invoice_detail', 'invoice_list', 'invoices/', 'order_detail', 'order_list', 'orders/', 'orders/<int:pk>/', 'payment_detail', 'payments/verify/', 'product_categories', 'product_detail', 'product_list', 'products', 'remove_from_cart', 'update_cart_item', 'verify_payment']

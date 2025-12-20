@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\serializers_admin.py
+# hypothesis_version: 6.148.7
+
+['amount', 'bill_date', 'both', 'city', 'created_at', 'current_stock', 'customer_invoice', 'due_date', 'email', 'id', 'line_subtotal', 'line_tax', 'line_total', 'lines', 'material', 'method', 'mobile', 'name', 'order_date', 'payment_date', 'pincode', 'product', 'product.product_name', 'product_category', 'product_name', 'product_type', 'published', 'purchase_order', 'purchase_order.id', 'purchase_order_id', 'purchase_price', 'quantity', 'sales_price', 'sales_tax_percentage', 'state', 'status', 'subtotal', 'tax_amount', 'tax_percentage', 'total_amount', 'type', 'unit_price', 'updated_at', 'user.email', 'user.id', 'user_email', 'user_id', 'vendor', 'vendor.email', 'vendor.name', 'vendor_bill', 'vendor_bill.id', 'vendor_bill_id', 'vendor_email', 'vendor_name']

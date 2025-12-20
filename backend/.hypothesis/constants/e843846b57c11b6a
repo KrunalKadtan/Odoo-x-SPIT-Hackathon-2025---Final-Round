@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\appareldesk\urls.py
+# hypothesis_version: 6.148.7
+
+['accounts.urls', 'admin/', 'api/', 'api/accounts/', 'api/products/', 'api/token/', 'api/token/refresh/', 'products.urls', 'token_obtain_pair', 'token_refresh']

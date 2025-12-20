@@ -10,7 +10,7 @@ import datetime
 from accounts.models import User, Contact
 from products.models import (
     PaymentTerm, Product, DiscountOffer, Coupon, 
-    SaleOrder, SaleOrderLine, CustomerInvoice, Payment, VendorBill
+    SaleOrder, SaleOrderLine, CustomerInvoice, Payment, VendorBill, PurchaseOrder
 )
 
 
@@ -444,6 +444,9 @@ class SaleOrderFactory(DjangoModelFactory):
     # Customer relationship (must be portal user)
     customer = factory.SubFactory(UserFactory, role='portal')
     
+    # Payment term relationship (required)
+    payment_term = factory.SubFactory(PaymentTermFactory)
+    
     # Order status (default to draft)
     status = 'draft'
     
@@ -590,6 +593,48 @@ class CustomerInvoiceFactory(DjangoModelFactory):
         )
 
 
+class PurchaseOrderFactory(DjangoModelFactory):
+    """
+    Factory for creating PurchaseOrder instances with valid test data.
+    
+    Usage:
+        # Create a purchase order with default values
+        order = PurchaseOrderFactory()
+        
+        # Create a confirmed purchase order using trait
+        confirmed_order = PurchaseOrderFactory(confirmed=True)
+        
+        # Create multiple purchase orders
+        orders = PurchaseOrderFactory.create_batch(5)
+    """
+    
+    class Meta:
+        model = PurchaseOrder
+    
+    # Vendor relationship (Contact with vendor type)
+    vendor = factory.SubFactory(ContactFactory, type='vendor')
+    
+    # Order status (default to draft)
+    status = 'draft'
+    
+    # Monetary fields
+    subtotal = factory.LazyFunction(lambda: fake.pydecimal(left_digits=4, right_digits=2, positive=True, min_value=100, max_value=9999))
+    total_amount = factory.LazyAttribute(lambda obj: obj.subtotal)
+    
+    class Params:
+        """
+        Traits for creating specific purchase order types.
+        """
+        # Trait for confirmed orders
+        confirmed = factory.Trait(
+            status='confirmed',
+        )
+        
+        # Trait for cancelled orders
+        cancelled = factory.Trait(
+            status='cancelled',
+        )
+
 
 class VendorBillFactory(DjangoModelFactory):
     """
@@ -608,6 +653,12 @@ class VendorBillFactory(DjangoModelFactory):
     
     class Meta:
         model = VendorBill
+    
+    # Purchase order relationship (required)
+    purchase_order = factory.SubFactory('tests.factories.PurchaseOrderFactory')
+    
+    # Vendor relationship (required, should match purchase order vendor)
+    vendor = factory.LazyAttribute(lambda obj: obj.purchase_order.vendor)
     
     # Total amount
     total_amount = factory.LazyFunction(

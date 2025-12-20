@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\new\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\products\urls_admin_vendor.py
+# hypothesis_version: 6.148.7
+
+['admin-product', 'admin-purchase-order', 'admin-reports', 'admin-vendor', 'admin-vendor-bill', 'admin-vendor-payment', 'admin/', 'me', 'payments', 'products', 'purchase-order-lines', 'purchase-orders', 'reports', 'vendor-bill', 'vendor-bills', 'vendor-payment', 'vendor-payments', 'vendor-product', 'vendor-self', 'vendor/', 'vendors']
