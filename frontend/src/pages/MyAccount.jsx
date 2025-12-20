@@ -22,12 +22,17 @@ const MyAccount = () => {
 
   useEffect(() => {
     loadUserProfile();
+  }, []);
+
+  useEffect(() => {
     if (activeSection === 'orders') {
       loadOrders();
     } else if (activeSection === 'invoices') {
       loadInvoices();
     }
-    
+  }, [activeSection]);
+
+  useEffect(() => {
     // Handle payment success from payment page
     if (location.state?.paymentSuccess) {
       const { invoiceId, amount, method } = location.state.paymentSuccess;
@@ -43,15 +48,18 @@ const MyAccount = () => {
       
       showSuccess(`Payment of ₹${amount} completed successfully via Razorpay!`);
       
-      // Clear the state to prevent repeated notifications
-      window.history.replaceState({}, document.title);
+      // Clear the state to prevent repeated notifications and navigation issues
+      navigate('/my-account', { 
+        state: { activeSection: 'invoices' }, 
+        replace: true 
+      });
     }
     
-    // Set active section from location state if provided
+    // Set active section from location state if provided (only once)
     if (location.state?.activeSection && location.state.activeSection !== activeSection) {
       setActiveSection(location.state.activeSection);
     }
-  }, [activeSection, location.state, showSuccess]);
+  }, [location.state?.paymentSuccess, location.state?.activeSection, showSuccess, navigate]);
 
   const loadUserProfile = async () => {
     setIsLoading(true);
@@ -600,15 +608,12 @@ const MyAccount = () => {
     <button
       key={key}
       onClick={() => {
-        setActiveSection(key);
-        // Reset selected items when switching sections
-        setSelectedOrder(null);
-        setSelectedInvoice(null);
-        // Load data for the new section
-        if (key === 'orders') {
-          loadOrders();
-        } else if (key === 'invoices') {
-          loadInvoices();
+        // Prevent unnecessary re-renders if already on the same section
+        if (activeSection !== key) {
+          setActiveSection(key);
+          // Reset selected items when switching sections
+          setSelectedOrder(null);
+          setSelectedInvoice(null);
         }
       }}
       className={`w-full text-left p-4 rounded-pro border transition-all duration-200 ${
@@ -1068,7 +1073,11 @@ const MyAccount = () => {
                               <div className="border-t border-app-border pt-3">
                                 <div className="flex justify-between text-lg font-medium text-app-main">
                                   <span className="font-sans">Total:</span>
-                                  <span className="font-mono text-app-accent">₹{selectedOrder.total}</span>
+                                  <span className="font-mono text-app-accent">₹{(() => {
+                                    const untaxedAmount = selectedOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) - (selectedOrder.discount?.amount || 0);
+                                    const taxAmount = Math.round(untaxedAmount * 0.10);
+                                    return untaxedAmount + taxAmount;
+                                  })()}</span>
                                 </div>
                               </div>
                             </div>
@@ -1111,7 +1120,11 @@ const MyAccount = () => {
                                     </div>
                                     <div>
                                       <span className="text-app-muted font-sans">Total:</span>
-                                      <p className="text-app-accent font-mono font-medium">₹{order.total}</p>
+                                      <p className="text-app-accent font-mono font-medium">₹{(() => {
+                                        const untaxedAmount = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) - (order.discount?.amount || 0);
+                                        const taxAmount = Math.round(untaxedAmount * 0.10);
+                                        return untaxedAmount + taxAmount;
+                                      })()}</p>
                                     </div>
                                   </div>
                                 </div>

@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.db import transaction
+from django.contrib.auth import authenticate
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -178,3 +179,52 @@ def profile(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """
+    Change user password API endpoint.
+    
+    POST: Changes the current user's password
+    
+    Request body:
+    {
+        "current_password": "oldpassword123",
+        "new_password": "newpassword123"
+    }
+    """
+    user = request.user
+    current_password = request.data.get('current_password')
+    new_password = request.data.get('new_password')
+    
+    # Validate required fields
+    if not current_password or not new_password:
+        return Response(
+            {'error': 'Both current_password and new_password are required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Verify current password
+    if not user.check_password(current_password):
+        return Response(
+            {'error': 'Current password is incorrect'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Validate new password strength
+    if len(new_password) < 8:
+        return Response(
+            {'error': 'New password must be at least 8 characters long'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Set new password
+    user.set_password(new_password)
+    user.save()
+    
+    return Response(
+        {'message': 'Password updated successfully'},
+        status=status.HTTP_200_OK
+    )

@@ -74,29 +74,39 @@ export const authAPI = {
 
   // Sign in
   signin: async (credentials) => {
-    const response = await api.post('/token/', credentials);
-    
-    // Get user profile after successful login
+    console.log('Attempting signin with:', { email: credentials.email });
     try {
-      const profileResponse = await api.get('/accounts/profile/', {
-        headers: {
-          Authorization: `Bearer ${response.data.access}`
-        }
-      });
+      const response = await api.post('/token/', credentials);
+      console.log('Signin response:', response.data);
       
-      // Store user data
-      localStorage.setItem('user_data', JSON.stringify(profileResponse.data));
-    } catch (profileError) {
-      console.warn('Could not fetch user profile:', profileError);
-      // Store basic user info from token if profile fetch fails
-      const userData = {
-        email: credentials.email,
-        name: credentials.email.split('@')[0] // fallback name
-      };
-      localStorage.setItem('user_data', JSON.stringify(userData));
+      // Get user profile after successful login
+      try {
+        const profileResponse = await api.get('/accounts/profile/', {
+          headers: {
+            Authorization: `Bearer ${response.data.access}`
+          }
+        });
+        
+        console.log('Profile response:', profileResponse.data);
+        
+        // Store user data
+        localStorage.setItem('user_data', JSON.stringify(profileResponse.data));
+      } catch (profileError) {
+        console.warn('Could not fetch user profile:', profileError);
+        // Store basic user info from token if profile fetch fails
+        const userData = {
+          email: credentials.email,
+          name: credentials.email.split('@')[0], // fallback name
+          role: 'internal' // assume internal for admin signin
+        };
+        localStorage.setItem('user_data', JSON.stringify(userData));
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Signin error details:', error.response?.data || error.message);
+      throw error;
     }
-    
-    return response.data;
   },
 
   // Refresh token
@@ -138,6 +148,12 @@ export const userAPI = {
   // Update user profile
   updateProfile: async (profileData) => {
     const response = await api.put('/accounts/profile/', profileData);
+    return response.data;
+  },
+
+  // Change password
+  changePassword: async (passwordData) => {
+    const response = await api.post('/accounts/change-password/', passwordData);
     return response.data;
   },
 };
@@ -276,6 +292,60 @@ export const tokenUtils = {
   isAuthenticated: () => {
     return !!localStorage.getItem('access_token');
   },
+
+  getUserRole: () => {
+    try {
+      const userData = localStorage.getItem('user_data');
+      if (userData) {
+        const user = JSON.parse(userData);
+        return user.role || 'portal'; // default to portal if role not found
+      }
+      return null;
+    } catch (error) {
+      console.error('Error parsing user role:', error);
+      return null;
+    }
+  },
 };
 
 export default api;
+// Admin Products API functions
+export const adminProductsAPI = {
+  // Get all products with filtering
+  getProducts: async (params = {}) => {
+    const response = await api.get('/products/admin/products/', { params });
+    return response.data;
+  },
+
+  // Get single product by ID
+  getProduct: async (id) => {
+    const response = await api.get(`/products/admin/products/${id}/`);
+    return response.data;
+  },
+
+  // Create new product
+  createProduct: async (productData) => {
+    const response = await api.post('/products/admin/products/', productData);
+    return response.data;
+  },
+
+  // Update product
+  updateProduct: async (id, productData) => {
+    const response = await api.put(`/products/admin/products/${id}/`, productData);
+    return response.data;
+  },
+
+  // Delete product
+  deleteProduct: async (id) => {
+    const response = await api.delete(`/products/admin/products/${id}/`);
+    return response.data;
+  },
+
+  // Toggle published status
+  togglePublished: async (id, published) => {
+    const response = await api.patch(`/products/admin/products/${id}/toggle-published/`, {
+      published: published
+    });
+    return response.data;
+  },
+};

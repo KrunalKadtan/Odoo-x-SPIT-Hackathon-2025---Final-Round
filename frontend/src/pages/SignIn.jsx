@@ -153,6 +153,15 @@ const SignIn = () => {
               Sign Up
             </Link>
           </p>
+          <p className="text-sm text-app-muted font-sans mt-2">
+            Internal staff?{' '}
+            <Link 
+              to="/admin/signin" 
+              className="text-app-accent hover:text-app-accent/80 font-medium transition-colors"
+            >
+              Admin Access
+            </Link>
+          </p>
         </div>
       </form>
     </AuthLayout>

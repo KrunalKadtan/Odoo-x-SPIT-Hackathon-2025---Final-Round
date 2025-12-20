@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, admin_views
 
 app_name = 'products'
 
@@ -7,6 +7,11 @@ urlpatterns = [
     path('', views.ProductListView.as_view(), name='product_list'),
     path('<int:id>/', views.ProductDetailView.as_view(), name='product_detail'),
     path('categories/', views.ProductCategoriesView.as_view(), name='product_categories'),
+    
+    # Admin endpoints
+    path('admin/products/', admin_views.admin_products, name='admin_products'),
+    path('admin/products/<int:product_id>/', admin_views.admin_product_detail, name='admin_product_detail'),
+    path('admin/products/<int:product_id>/toggle-published/', admin_views.admin_product_toggle_published, name='admin_product_toggle_published'),
     
     # Cart endpoints
     path('cart/', views.CartView.as_view(), name='cart'),
