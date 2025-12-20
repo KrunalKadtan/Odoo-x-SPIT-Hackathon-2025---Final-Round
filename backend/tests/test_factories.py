@@ -5,7 +5,8 @@ Verifies that factories generate valid test data.
 import pytest
 from django.db import IntegrityError
 from accounts.models import User, Contact
-from tests.factories import UserFactory, ContactFactory
+from products.models import PaymentTerm
+from tests.factories import UserFactory, ContactFactory, PaymentTermFactory
 
 
 @pytest.mark.django_db
@@ -154,3 +155,69 @@ class TestContactFactory:
         
         assert contact.name == custom_name
         assert contact.email == custom_email
+
+
+
+@pytest.mark.django_db
+class TestPaymentTermFactory:
+    """Test PaymentTermFactory generates valid PaymentTerm instances."""
+    
+    def test_creates_payment_term_without_discount_by_default(self):
+        """Test that PaymentTermFactory creates a payment term without discount by default."""
+        term = PaymentTermFactory()
+        
+        assert term.id is not None
+        assert term.name is not None
+        assert term.early_payment_discount is False
+        assert term.discount_percentage == 0.00
+        assert term.discount_days == 0
+        assert term.early_pay_discount_computation is None
+        assert term.is_default is False
+        assert term.example_preview is not None
+    
+    def test_creates_payment_term_with_discount_trait(self):
+        """Test that with_discount trait creates a payment term with early payment discount."""
+        term = PaymentTermFactory(with_discount=True)
+        
+        assert term.early_payment_discount is True
+        assert term.discount_percentage > 0
+        assert term.discount_percentage <= 100
+        assert term.discount_days > 0
+        assert term.early_pay_discount_computation == 'percentage_of_total'
+    
+    def test_creates_payment_term_without_discount_trait(self):
+        """Test that no_discount trait creates a payment term without discount."""
+        term = PaymentTermFactory(no_discount=True)
+        
+        assert term.early_payment_discount is False
+        assert term.discount_percentage == 0.00
+        assert term.discount_days == 0
+        assert term.early_pay_discount_computation is None
+    
+    def test_creates_default_payment_term_trait(self):
+        """Test that default_term trait creates the default payment term."""
+        term = PaymentTermFactory(default_term=True)
+        
+        assert term.name == 'Immediate Payment'
+        assert term.early_payment_discount is False
+        assert term.is_default is True
+        assert 'immediately' in term.example_preview.lower()
+    
+    def test_creates_batch_of_payment_terms(self):
+        """Test that create_batch creates multiple payment terms."""
+        terms = PaymentTermFactory.create_batch(5)
+        
+        assert len(terms) == 5
+        # All should have unique names
+        names = [term.name for term in terms]
+        assert len(names) == len(set(names))
+    
+    def test_custom_values_override_defaults(self):
+        """Test that custom values override factory defaults."""
+        custom_name = 'Net 30'
+        custom_days = 30
+        
+        term = PaymentTermFactory(name=custom_name, discount_days=custom_days)
+        
+        assert term.name == custom_name
+        assert term.discount_days == custom_days

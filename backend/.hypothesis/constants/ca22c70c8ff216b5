@@ -1,0 +1,4 @@
+# file: D:\OdooXSPITMumbai\project-aarav\Odoo-x-SPIT-Hackathon-2025---Final-Round\backend\accounts\models.py
+# hypothesis_version: 6.148.7
+
+[100, 128, 255, 'Both', 'Contact', 'Contacts', 'Customer', 'Email Address', 'Internal Staff', 'Portal User', 'User', 'Users', 'Vendor', '^\\+?1?\\d{9,15}$', '^\\d{6}$', 'both', 'contact', 'contact_email_idx', 'contact_type_idx', 'contacts', 'customer', 'email', 'internal', 'is_staff', 'is_superuser', 'name', 'portal', 'role', 'type', 'user_email_idx', 'user_role_idx', 'users', 'valid_contact_type', 'valid_role', 'vendor']

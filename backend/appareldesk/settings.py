@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',  # CORS headers
     'accounts',  # Custom user app
+    'products',
 ]
 
 # Custom User Model
