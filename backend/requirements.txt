@@ -4,3 +4,10 @@ psycopg2-binary>=2.9,<3.0
 djangorestframework-simplejwt>=5.3,<6.0
 python-decouple>=3.8,<4.0
 django-cors-headers>=4.3,<5.0
+
+# Testing dependencies
+pytest>=7.4,<8.0
+pytest-django>=4.5,<5.0
+hypothesis>=6.92,<7.0
+factory-boy>=3.3,<4.0
+Faker>=20.0,<21.0
