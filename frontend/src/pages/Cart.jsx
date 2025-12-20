@@ -150,8 +150,11 @@ const Cart = () => {
         // Get the invoice ID from the response
         const invoiceId = response.invoice_id;
         
-        // Create Razorpay payment order
-        const paymentOrderData = await paymentsAPI.createPaymentOrder(invoiceId);
+        // Calculate total amount including taxes (10%)
+        const totalWithTaxes = Math.round((cart?.total || 0) * 1.1);
+        
+        // Create Razorpay payment order with correct amount including taxes
+        const paymentOrderData = await paymentsAPI.createPaymentOrder(invoiceId, totalWithTaxes);
         
         // Process Razorpay payment
         await processRazorpayPayment(paymentOrderData, response.order);

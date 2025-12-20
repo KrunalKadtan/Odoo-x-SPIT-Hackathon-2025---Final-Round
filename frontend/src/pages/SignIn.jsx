@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
 import FormInput from '../components/FormInput';
+import PasswordInput from '../components/PasswordInput';
 import Button from '../components/Button';
 import { authAPI, tokenUtils } from '../utils/api';
 import { validateSigninForm } from '../utils/validation';
@@ -112,9 +113,8 @@ const SignIn = () => {
           required
         />
 
-        <FormInput
+        <PasswordInput
           label="Password"
-          type="password"
           name="password"
           value={formData.password}
           onChange={handleChange}

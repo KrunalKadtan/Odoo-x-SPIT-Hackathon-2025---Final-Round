@@ -4,6 +4,7 @@ import Navigation from '../components/Navigation';
 import Breadcrumb from '../components/Breadcrumb';
 import FilterSidebar from '../components/FilterSidebar';
 import ProductCard from '../components/ProductCard';
+import SortDropdown from '../components/SortDropdown';
 import { productsAPI } from '../utils/api';
 
 const Shop = () => {
@@ -17,6 +18,25 @@ const Shop = () => {
   const [categories, setCategories] = useState(['All Products']);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Sort options with icons
+  const sortOptions = [
+    {
+      value: 'name',
+      label: 'Sort By: Name',
+      icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+    },
+    {
+      value: 'price_low',
+      label: 'Sort By: Price (Low to High)',
+      icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+    },
+    {
+      value: 'price_high',
+      label: 'Sort By: Price (High to Low)',
+      icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" />
+    }
+  ];
 
   // Set category from URL parameter
   useEffect(() => {
@@ -206,15 +226,11 @@ const Shop = () => {
 
             {/* Sort Dropdown */}
             <div className="ml-4">
-              <select
+              <SortDropdown
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2 border border-app-border rounded-pro bg-app-surface text-app-main focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent"
-              >
-                <option value="name">Sort By: Name</option>
-                <option value="price_low">Sort By: Price (Low to High)</option>
-                <option value="price_high">Sort By: Price (High to Low)</option>
-              </select>
+                onChange={setSortBy}
+                options={sortOptions}
+              />
             </div>
           </div>
 
