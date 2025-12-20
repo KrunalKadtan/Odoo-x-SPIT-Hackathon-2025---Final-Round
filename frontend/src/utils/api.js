@@ -142,6 +142,106 @@ export const userAPI = {
   },
 };
 
+// Invoices API functions
+export const invoicesAPI = {
+  // Get all invoices for current user
+  getUserInvoices: async () => {
+    const response = await api.get('/products/invoices/');
+    return response.data;
+  },
+
+  // Get single invoice by ID
+  getInvoice: async (invoiceId) => {
+    const response = await api.get(`/products/invoices/${invoiceId}/`);
+    return response.data;
+  },
+};
+
+// Cart API functions
+export const cartAPI = {
+  // Get user's cart
+  getCart: async () => {
+    const response = await api.get('/products/cart/');
+    return response.data;
+  },
+
+  // Add item to cart
+  addToCart: async (productId, quantity = 1) => {
+    const response = await api.post('/products/cart/add/', {
+      product_id: productId,
+      quantity: quantity
+    });
+    return response.data;
+  },
+
+  // Update cart item quantity
+  updateCartItem: async (itemId, quantity) => {
+    const response = await api.put(`/products/cart/items/${itemId}/`, {
+      quantity: quantity
+    });
+    return response.data;
+  },
+
+  // Remove item from cart
+  removeFromCart: async (itemId) => {
+    const response = await api.delete(`/products/cart/items/${itemId}/remove/`);
+    return response.data;
+  },
+
+  // Clear entire cart
+  clearCart: async () => {
+    const response = await api.delete('/products/cart/clear/');
+    return response.data;
+  },
+};
+
+// Orders API functions
+export const ordersAPI = {
+  // Get all orders for current user
+  getUserOrders: async () => {
+    const response = await api.get('/products/orders/');
+    return response.data;
+  },
+
+  // Get single order by ID
+  getOrder: async (orderId) => {
+    const response = await api.get(`/products/orders/${orderId}/`);
+    return response.data;
+  },
+
+  // Create order from cart (checkout)
+  checkout: async () => {
+    const response = await api.post('/products/checkout/');
+    return response.data;
+  },
+};
+export const paymentsAPI = {
+  // Create Razorpay payment order
+  createPaymentOrder: async (invoiceId, amount = null) => {
+    const response = await api.post('/products/payments/create-order/', {
+      invoice_id: invoiceId,
+      ...(amount && { amount })
+    });
+    return response.data;
+  },
+
+  // Verify Razorpay payment
+  verifyPayment: async (paymentId, razorpayPaymentId, razorpaySignature) => {
+    const response = await api.post('/products/payments/verify/', {
+      payment_id: paymentId,
+      razorpay_payment_id: razorpayPaymentId,
+      razorpay_signature: razorpaySignature
+    });
+    return response.data;
+  },
+
+  // Get payment details
+  getPayment: async (paymentId) => {
+    const response = await api.get(`/products/payments/${paymentId}/`);
+    return response.data;
+  },
+};
+
 // Utility functions for token management
 export const tokenUtils = {
   setTokens: (tokens) => {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { tokenUtils } from '../utils/api';
 import { useCart } from '../context/CartContext';
+import Cart from './Cart';
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ const Navigation = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userName, setUserName] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showCart, setShowCart] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -121,7 +123,7 @@ const Navigation = () => {
           <div className="flex items-center space-x-4">
             {/* Cart Icon */}
             <button 
-              onClick={() => navigate('/cart')}
+              onClick={() => setShowCart(true)}
               className="relative text-app-main hover:text-app-accent transition-colors duration-200"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,6 +184,9 @@ const Navigation = () => {
           </div>
         </div>
       </div>
+      
+      {/* Cart Sidebar */}
+      <Cart isOpen={showCart} onClose={() => setShowCart(false)} />
     </nav>
   );
 };

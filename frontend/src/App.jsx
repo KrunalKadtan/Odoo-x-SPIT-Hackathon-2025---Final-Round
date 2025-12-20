@@ -14,6 +14,7 @@ import Cart from './pages/Cart';
 import OrderConfirmation from './pages/OrderConfirmation';
 import OrderError from './pages/OrderError';
 import MyAccount from './pages/MyAccount';
+import Payment from './pages/Payment';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -73,6 +74,14 @@ function App() {
             />
             
             {/* Protected routes */}
+            <Route 
+              path="/payment" 
+              element={
+                <ProtectedRoute>
+                  <Payment />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/my-account" 
               element={

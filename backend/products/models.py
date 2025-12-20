@@ -6,6 +6,78 @@ from django.conf import settings
 import datetime
 from decimal import Decimal
 
+
+class Cart(models.Model):
+    """
+    Shopping cart for users to store items before checkout.
+    """
+    id = models.BigAutoField(primary_key=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='cart',
+        help_text="User who owns this cart"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'carts'
+        verbose_name = 'Cart'
+        verbose_name_plural = 'Carts'
+    
+    def __str__(self):
+        return f"Cart for {self.user.email}"
+    
+    def get_total(self):
+        """Calculate total cart value."""
+        return sum(item.get_total() for item in self.items.all())
+    
+    def get_item_count(self):
+        """Get total number of items in cart."""
+        return sum(item.quantity for item in self.items.all())
+
+
+class CartItem(models.Model):
+    """
+    Individual items in a shopping cart.
+    """
+    id = models.BigAutoField(primary_key=True)
+    cart = models.ForeignKey(
+        Cart,
+        on_delete=models.CASCADE,
+        related_name='items',
+        help_text="Cart this item belongs to"
+    )
+    product = models.ForeignKey(
+        'Product',
+        on_delete=models.CASCADE,
+        help_text="Product in the cart"
+    )
+    quantity = models.IntegerField(
+        validators=[MinValueValidator(1)],
+        help_text="Quantity of the product"
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'cart_items'
+        verbose_name = 'Cart Item'
+        verbose_name_plural = 'Cart Items'
+        unique_together = ('cart', 'product')
+        indexes = [
+            models.Index(fields=['cart'], name='cart_item_cart_idx'),
+            models.Index(fields=['product'], name='cart_item_product_idx'),
+        ]
+    
+    def __str__(self):
+        return f"{self.product.product_name} x {self.quantity}"
+    
+    def get_total(self):
+        """Calculate total price for this cart item."""
+        return self.product.sales_price * self.quantity
+
 class Product(models.Model):
     id = models.BigAutoField(primary_key=True)  # BigSerial is handled by BigAutoField
     product_name = models.CharField(max_length=255, db_index=True)
@@ -485,6 +557,14 @@ class SaleOrder(models.Model):
         blank=True,
         related_name='orders',
         help_text="Coupon applied to this order"
+    )
+    
+    # Payment term relationship
+    payment_term = models.ForeignKey(
+        'PaymentTerm',
+        on_delete=models.PROTECT,
+        related_name='orders',
+        help_text="Payment terms for this order"
     )
     
     # Timestamps

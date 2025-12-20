@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { cartAPI } from '../utils/api';
+import { tokenUtils } from '../utils/api';
 
 const CartContext = createContext();
 
@@ -11,94 +13,113 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState([]);
+  const [cart, setCart] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // Load cart from localStorage on mount
+  // Load cart from backend when user is authenticated
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      try {
-        setCartItems(JSON.parse(savedCart));
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
-      }
+    if (tokenUtils.isAuthenticated()) {
+      loadCart();
     }
   }, []);
 
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
-  }, [cartItems]);
-
-  const addToCart = (product, selectedColor, selectedSize, quantity = 1) => {
-    const cartItem = {
-      id: `${product.id}-${selectedColor}-${selectedSize}`,
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      color: selectedColor,
-      size: selectedSize,
-      quantity: quantity,
-      category: product.category
-    };
-
-    setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === cartItem.id);
-      
-      if (existingItem) {
-        // Update quantity if item already exists
-        return prevItems.map(item =>
-          item.id === cartItem.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      } else {
-        // Add new item
-        return [...prevItems, cartItem];
-      }
-    });
+  const loadCart = async () => {
+    if (!tokenUtils.isAuthenticated()) return;
+    
+    setLoading(true);
+    try {
+      const cartData = await cartAPI.getCart();
+      setCart(cartData);
+    } catch (error) {
+      console.error('Error loading cart:', error);
+      // Initialize empty cart on error
+      setCart({ items: [], total: 0, item_count: 0 });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const removeFromCart = (itemId) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
-  };
-
-  const updateQuantity = (itemId, newQuantity) => {
-    if (newQuantity <= 0) {
-      removeFromCart(itemId);
-      return;
+  const addToCart = async (productId, quantity = 1) => {
+    if (!tokenUtils.isAuthenticated()) {
+      throw new Error('Please sign in to add items to cart');
     }
 
-    setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === itemId
-          ? { ...item, quantity: newQuantity }
-          : item
-      )
-    );
+    try {
+      const response = await cartAPI.addToCart(productId, quantity);
+      setCart(response.cart);
+      return response;
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      throw error;
+    }
   };
 
-  const clearCart = () => {
-    setCartItems([]);
+  const removeFromCart = async (itemId) => {
+    if (!tokenUtils.isAuthenticated()) return;
+
+    try {
+      const response = await cartAPI.removeFromCart(itemId);
+      setCart(response.cart);
+      return response;
+    } catch (error) {
+      console.error('Error removing from cart:', error);
+      throw error;
+    }
+  };
+
+  const updateQuantity = async (itemId, newQuantity) => {
+    if (!tokenUtils.isAuthenticated()) return;
+
+    if (newQuantity <= 0) {
+      return await removeFromCart(itemId);
+    }
+
+    try {
+      const response = await cartAPI.updateCartItem(itemId, newQuantity);
+      setCart(response.cart);
+      return response;
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      throw error;
+    }
+  };
+
+  const clearCart = async () => {
+    if (!tokenUtils.isAuthenticated()) return;
+
+    try {
+      const response = await cartAPI.clearCart();
+      setCart(response.cart);
+      return response;
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+      throw error;
+    }
   };
 
   const getCartTotal = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart?.total || 0;
   };
 
   const getCartItemsCount = () => {
-    return cartItems.reduce((count, item) => count + item.quantity, 0);
+    return cart?.item_count || 0;
+  };
+
+  const getCartItems = () => {
+    return cart?.items || [];
   };
 
   const value = {
-    cartItems,
+    cart,
+    loading,
+    loadCart,
     addToCart,
     removeFromCart,
     updateQuantity,
     clearCart,
     getCartTotal,
-    getCartItemsCount
+    getCartItemsCount,
+    getCartItems
   };
 
   return (

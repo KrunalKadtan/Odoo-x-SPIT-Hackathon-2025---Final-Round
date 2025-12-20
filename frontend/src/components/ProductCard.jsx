@@ -2,27 +2,34 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
+import { tokenUtils } from '../utils/api';
 
 const ProductCard = ({ product }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { showSuccess } = useNotification();
+  const { showSuccess, showError } = useNotification();
 
   const handleProductClick = () => {
-    navigate(`/product/${product.category.toLowerCase()}/${product.id}`);
+    navigate(`/product/${product.category?.toLowerCase() || 'products'}/${product.id}`);
   };
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.stopPropagation(); // Prevent navigation when clicking add to cart
     
-    // Add to cart with default selections
-    const defaultColor = product.colors && product.colors.length > 0 ? product.colors[0] : 'Default';
-    const defaultSize = 'M'; // Default size
+    // Check if user is authenticated
+    if (!tokenUtils.isAuthenticated()) {
+      showError('Please sign in to add items to cart');
+      navigate('/signin');
+      return;
+    }
     
-    addToCart(product, defaultColor, defaultSize, 1);
-    
-    // Show success notification
-    showSuccess(`${product.name} added to cart!`, 'Added to Cart');
+    try {
+      const response = await addToCart(product.id, 1);
+      showSuccess(response.message || `${product.name} added to cart!`);
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      showError(error.response?.data?.error || 'Failed to add item to cart');
+    }
   };
 
   return (
