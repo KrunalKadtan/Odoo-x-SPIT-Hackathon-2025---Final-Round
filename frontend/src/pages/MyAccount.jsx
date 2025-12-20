@@ -239,8 +239,24 @@ const MyAccount = () => {
     }
   };
 
+  const handleViewOrder = (order) => {
+    setSelectedOrder(order);
+    // Don't navigate, just show the order details
+  };
+
+  const handleBackToOrders = () => {
+    setSelectedOrder(null);
+    // Stay on the same page, just change the view
+  };
+
   const handleViewInvoice = (invoice) => {
     setSelectedInvoice(invoice);
+    // Don't navigate, just show the invoice details
+  };
+
+  const handleBackToInvoices = () => {
+    setSelectedInvoice(null);
+    // Stay on the same page, just change the view
   };
 
   const handlePrintInvoice = (invoice) => {
@@ -413,10 +429,6 @@ const MyAccount = () => {
     });
   };
 
-  const handleViewOrder = (order) => {
-    setSelectedOrder(order);
-  };
-
   const handlePrintOrder = (order) => {
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
@@ -587,7 +599,18 @@ const MyAccount = () => {
   const renderSidebarItem = (key, icon, title, description) => (
     <button
       key={key}
-      onClick={() => setActiveSection(key)}
+      onClick={() => {
+        setActiveSection(key);
+        // Reset selected items when switching sections
+        setSelectedOrder(null);
+        setSelectedInvoice(null);
+        // Load data for the new section
+        if (key === 'orders') {
+          loadOrders();
+        } else if (key === 'invoices') {
+          loadInvoices();
+        }
+      }}
       className={`w-full text-left p-4 rounded-pro border transition-all duration-200 ${
         activeSection === key
           ? 'border-app-accent bg-app-accent/10 text-app-accent'
@@ -902,7 +925,7 @@ const MyAccount = () => {
                         <div className="space-y-6">
                           {/* Back Button */}
                           <button
-                            onClick={() => setSelectedOrder(null)}
+                            onClick={handleBackToOrders}
                             className="flex items-center space-x-2 text-app-accent hover:text-app-accent/80 transition-colors duration-200"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1157,7 +1180,7 @@ const MyAccount = () => {
                         <div className="space-y-6">
                           {/* Back Button */}
                           <button
-                            onClick={() => setSelectedInvoice(null)}
+                            onClick={handleBackToInvoices}
                             className="flex items-center space-x-2 text-app-accent hover:text-app-accent/80 transition-colors duration-200"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

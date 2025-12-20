@@ -1,51 +1,25 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
-import { useCart } from '../context/CartContext';
 
 const OrderConfirmation = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { clearCart } = useCart();
-  const [orderData, setOrderData] = useState(null);
-  const cartClearedRef = useRef(false);
+  const { order, address, paymentMethod, paymentSuccess, paymentId } = location.state || {};
 
   useEffect(() => {
-    // Get order data from navigation state
-    if (location.state && location.state.orderData) {
-      setOrderData(location.state.orderData);
-      
-      // Clear the cart after successful order (only once)
-      if (!cartClearedRef.current) {
-        clearCart();
-        cartClearedRef.current = true;
-      }
-    } else {
-      // If no order data, redirect to cart
+    // Redirect if no order data
+    if (!order) {
       navigate('/cart');
     }
-  }, [location.state, navigate]); // Removed clearCart and cartCleared from dependencies
+  }, [order, navigate]);
 
   const handlePrint = () => {
     window.print();
   };
 
-  if (!orderData) {
-    return (
-      <div className="min-h-screen bg-app-primary">
-        <Navigation />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="text-app-muted mb-4">
-              <svg className="w-8 h-8 mx-auto animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <p className="text-app-muted">Loading order details...</p>
-          </div>
-        </div>
-      </div>
-    );
+  if (!order) {
+    return null;
   }
 
   return (
@@ -53,35 +27,122 @@ const OrderConfirmation = () => {
       <Navigation />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Success Header */}
+        {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="font-display text-3xl font-light text-app-main mb-2">
-            Thank you for your order!
+          <h1 className="font-display text-4xl font-light text-app-main tracking-tight mb-2">
+            Thank you for your order.
           </h1>
           <p className="text-app-muted font-sans">
-            Order #{orderData.orderNumber || `S${Date.now().toString().slice(-6)}`}
+            Order S{String(order.id).padStart(4, '0')}
           </p>
         </div>
 
-        {/* Payment Status */}
-        <div className="bg-green-50 border border-green-200 rounded-pro p-4 mb-8">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-green-800 font-sans font-medium">
-              Your payment has been processed.
-            </span>
-          </div>
+        {/* Order Status */}
+        <div className={`border rounded-pro p-4 mb-8 text-center ${
+          paymentMethod === 'razorpay' && paymentSuccess 
+            ? 'bg-green-50 border-green-200' 
+            : paymentMethod === 'cod' 
+            ? 'bg-blue-50 border-blue-200'
+            : 'bg-green-50 border-green-200'
+        }`}>
+          <p className={`font-sans ${
+            paymentMethod === 'razorpay' && paymentSuccess 
+              ? 'text-green-800' 
+              : paymentMethod === 'cod' 
+              ? 'text-blue-800'
+              : 'text-green-800'
+          }`}>
+            {paymentMethod === 'razorpay' && paymentSuccess 
+              ? 'Your payment has been processed successfully.' 
+              : paymentMethod === 'cod' 
+              ? 'Your order has been confirmed. Pay cash on delivery.'
+              : 'Your order has been confirmed.'}
+          </p>
+          {paymentId && (
+            <p className="text-sm text-app-muted mt-1">
+              Payment ID: {paymentId}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Side - Order Details */}
+          {/* Order Details */}
+          <div className="bg-app-surface rounded-pro border border-app-border p-6">
+            <h3 className="font-display text-xl font-medium text-app-main mb-6">
+              Order Details
+            </h3>
+            
+            <div className="space-y-4">
+              {order.lines?.map((line, index) => (
+                <div key={index} className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-app-secondary rounded border border-app-border flex items-center justify-center">
+                    <span className="text-app-accent font-mono text-sm">{line.quantity}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-sans font-medium text-app-main">
+                      {line.product?.product_name || 'Product'}
+                    </h4>
+                    <p className="text-sm text-app-muted">
+                      ₹{line.unit_price} each
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono font-medium text-app-accent">
+                      ₹{line.line_total}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              
+              {order.discount_amount > 0 && (
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-green-100 rounded border border-green-200 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-sans font-medium text-app-main">
+                      10% on your order
+                    </h4>
+                    <p className="text-sm text-app-muted">
+                      Code: DISCOUNT10
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono font-medium text-green-600">
+                      -₹{order.discount_amount}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <hr className="border-app-border my-6" />
+            
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="font-sans font-medium text-app-main">Subtotal:</span>
+                <span className="font-mono text-app-main">₹{order.subtotal}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-sans text-app-main">Taxes:</span>
+                <span className="font-mono text-app-main">₹{Math.round(order.total_amount * 0.1)}</span>
+              </div>
+              <hr className="border-app-border" />
+              <div className="flex justify-between font-medium text-lg">
+                <span className="font-sans text-app-main">Total:</span>
+                <span className="font-mono text-app-accent">₹{Math.round(order.total_amount * 1.1)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Delivery & Payment Info */}
           <div className="space-y-6">
             {/* Delivery Address */}
             <div className="bg-app-surface rounded-pro border border-app-border p-6">
@@ -89,16 +150,12 @@ const OrderConfirmation = () => {
                 Delivery Address
               </h3>
               <div className="text-app-main font-sans space-y-1">
-                <p className="font-medium">{orderData.address.fullName}</p>
-                <p>{orderData.address.address}</p>
-                <p>{orderData.address.city}, {orderData.address.state} {orderData.address.pincode}</p>
-                <p>{orderData.address.country}</p>
-                <p className="text-app-muted mt-2">
-                  Phone: {orderData.address.phone}
-                </p>
-                <p className="text-app-muted">
-                  Email: {orderData.address.email}
-                </p>
+                <p className="font-medium">{address?.name}</p>
+                <p>{address?.address}</p>
+                <p>{address?.city} - {address?.pincode}</p>
+                <p>{address?.state}</p>
+                <p>{address?.phone}</p>
+                {address?.email && <p>{address.email}</p>}
               </div>
             </div>
 
@@ -107,154 +164,57 @@ const OrderConfirmation = () => {
               <h3 className="font-display text-xl font-medium text-app-main mb-4">
                 Payment Method
               </h3>
-              <div className="text-app-main font-sans">
-                {orderData.payment.method === 'card' && (
-                  <div>
-                    <p className="font-medium">Credit/Debit Card</p>
-                    <p className="text-app-muted">**** **** **** {orderData.payment.details.cardNumber}</p>
-                    <p className="text-app-muted">{orderData.payment.details.cardName}</p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  {paymentMethod === 'razorpay' ? (
+                    <>
+                      <svg className="w-5 h-5 text-app-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      <span className="font-sans text-app-main">Razorpay</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 text-app-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      <span className="font-sans text-app-main">Cash on Delivery</span>
+                    </>
+                  )}
+                </div>
+                {paymentMethod === 'razorpay' && paymentSuccess && (
+                  <div className="text-sm text-green-600 font-sans">
+                    ✓ Payment completed successfully
                   </div>
                 )}
-                {orderData.payment.method === 'upi' && (
-                  <div>
-                    <p className="font-medium">UPI Payment</p>
-                    <p className="text-app-muted">{orderData.payment.details.upiId}</p>
-                  </div>
-                )}
-                {orderData.payment.method === 'cod' && (
-                  <div>
-                    <p className="font-medium">Cash on Delivery</p>
-                    <p className="text-app-muted">Pay ₹{orderData.totals.total} when delivered</p>
+                {paymentMethod === 'cod' && (
+                  <div className="text-sm text-blue-600 font-sans">
+                    Pay ₹{Math.round(order.total_amount * 1.1)} when delivered
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Delivery Information */}
-            <div className="bg-app-surface rounded-pro border border-app-border p-6">
-              <h3 className="font-display text-xl font-medium text-app-main mb-4">
-                Delivery Information
-              </h3>
-              <div className="text-app-main font-sans space-y-2">
-                <div className="flex justify-between">
-                  <span>Estimated Delivery:</span>
-                  <span className="font-medium">2-3 Business Days</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Shipping:</span>
-                  <span className="font-medium">
-                    {orderData.totals.total >= 999 ? 'Free' : '₹50'}
-                  </span>
-                </div>
-                <p className="text-app-muted text-sm mt-3">
-                  You will receive a tracking number via email once your order is shipped.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Side - Order Summary */}
-          <div className="space-y-6">
-            {/* Order Items */}
-            <div className="bg-app-surface rounded-pro border border-app-border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display text-xl font-medium text-app-main">
-                  Order Summary
-                </h3>
-                <button
-                  onClick={handlePrint}
-                  className="px-4 py-2 border border-app-border text-app-main rounded-pro font-sans text-sm hover:bg-app-secondary transition-colors duration-200"
-                >
-                  Print
-                </button>
-              </div>
-
-              {/* Items List */}
-              <div className="space-y-4 mb-6">
-                {orderData.items.map((item) => (
-                  <div key={item.id} className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-app-secondary border border-app-border rounded-pro flex items-center justify-center">
-                      {item.image ? (
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-pro" />
-                      ) : (
-                        <div className="text-center">
-                          <div className="text-xs text-app-muted font-mono">{item.category}</div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-sans font-medium text-app-main text-sm">{item.name}</h4>
-                      <div className="text-xs text-app-muted space-y-1">
-                        {item.color && <p>Color: {item.color}</p>}
-                        {item.size && <p>Size: {item.size}</p>}
-                        <p>Qty: {item.quantity}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-mono font-medium text-app-accent text-sm">
-                        ₹{item.price * item.quantity}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Order Totals */}
-              <div className="border-t border-app-border pt-4 space-y-2">
-                <div className="flex justify-between text-app-main font-sans">
-                  <span>Subtotal</span>
-                  <span className="font-mono">₹{orderData.totals.subtotal}</span>
-                </div>
-                
-                {orderData.appliedDiscount && (
-                  <div className="flex justify-between text-green-600 font-sans">
-                    <span>Discount ({orderData.appliedDiscount.description})</span>
-                    <span className="font-mono">-₹{Math.round(orderData.totals.discount)}</span>
-                  </div>
-                )}
-                
-                <div className="flex justify-between text-app-main font-sans">
-                  <span>Taxes (GST)</span>
-                  <span className="font-mono">₹{orderData.totals.taxes}</span>
-                </div>
-                
-                <hr className="border-app-border" />
-                
-                <div className="flex justify-between font-medium text-lg">
-                  <span className="text-app-main font-sans">Total</span>
-                  <span className="text-app-accent font-mono">₹{orderData.totals.total}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
+            {/* Actions */}
             <div className="space-y-3">
               <button
+                onClick={handlePrint}
+                className="w-full py-3 bg-app-accent text-white rounded-pro font-mono text-sm tracking-wider hover:bg-app-accent/90 transition-colors"
+              >
+                Print
+              </button>
+              <button
+                onClick={() => navigate('/my-account', { state: { activeSection: 'orders' } })}
+                className="w-full py-3 border border-app-border text-app-main rounded-pro font-sans text-sm hover:bg-app-secondary transition-colors"
+              >
+                View Orders
+              </button>
+              <button
                 onClick={() => navigate('/shop')}
-                className="w-full bg-app-accent text-white py-3 rounded-pro font-mono text-sm tracking-widest uppercase hover:bg-app-accent/90 transition-all duration-200"
+                className="w-full py-3 border border-app-border text-app-main rounded-pro font-sans text-sm hover:bg-app-secondary transition-colors"
               >
                 Continue Shopping
               </button>
-              
-              <button
-                onClick={() => navigate('/my-account')}
-                className="w-full border border-app-border text-app-main py-3 rounded-pro font-sans text-sm hover:bg-app-secondary transition-all duration-200"
-              >
-                View Order History
-              </button>
-            </div>
-
-            {/* Support Information */}
-            <div className="bg-blue-50 border border-blue-200 rounded-pro p-4">
-              <h4 className="font-sans font-medium text-blue-800 mb-2">
-                Need Help?
-              </h4>
-              <p className="text-blue-700 font-sans text-sm mb-2">
-                If you have any questions about your order, please contact our support team.
-              </p>
-              <p className="text-blue-700 font-sans text-sm">
-                Email: support@appareldesk.com | Phone: +91 98765 43210
-              </p>
             </div>
           </div>
         </div>

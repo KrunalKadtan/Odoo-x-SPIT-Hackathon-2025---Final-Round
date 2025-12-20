@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import Breadcrumb from '../components/Breadcrumb';
-import { productsAPI } from '../utils/api';
+import { productsAPI, tokenUtils } from '../utils/api';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
 
@@ -10,7 +10,7 @@ const ProductDetail = () => {
   const { category, productId } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { showSuccess } = useNotification();
+  const { showSuccess, showError } = useNotification();
   const [product, setProduct] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState('');
@@ -115,20 +115,22 @@ const ProductDetail = () => {
     setQuantity(prev => Math.max(1, Math.min(product?.stock || 1, prev + change)));
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product) return;
     
-    // Add to cart using context
-    addToCart(product, selectedColor, selectedSize, quantity);
+    if (!tokenUtils.isAuthenticated()) {
+      showError('Please sign in to add items to cart');
+      navigate('/signin');
+      return;
+    }
     
-    // Show success notification
-    showSuccess(
-      `${quantity} ${product.name} added to cart! Color: ${selectedColor}, Size: ${selectedSize}`,
-      'Added to Cart'
-    );
-    
-    // Optionally redirect to cart
-    // navigate('/cart');
+    try {
+      const response = await addToCart(product.id, quantity);
+      showSuccess(response.message || `${quantity} ${product.name} added to cart!`);
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      showError(error.response?.data?.error || 'Failed to add item to cart');
+    }
   };
 
   if (loading) {
