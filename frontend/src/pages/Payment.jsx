@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import { useNotification } from '../context/NotificationContext';
-import { tokenUtils, paymentsAPI } from '../utils/api';
+import { tokenUtils, paymentsAPI, ordersAPI, invoicesAPI } from '../utils/api';
 
 const Payment = () => {
   const navigate = useNavigate();
@@ -63,7 +63,22 @@ const Payment = () => {
           script.src = 'https://checkout.razorpay.com/v1/checkout.js';
           script.onload = () => processRazorpayPayment(orderData);
           script.onerror = () => {
-            showError('Failed to load Razorpay payment gateway. Please try again.');
+            // Navigate to order error page for payment gateway loading failure
+            navigate('/order-error', {
+              state: {
+                errorData: {
+                  type: 'payment_failed',
+                  message: 'Failed to load Razorpay payment gateway. Please try again.',
+                  details: 'RAZORPAY_SCRIPT_LOAD_FAILED',
+                  orderSummary: {
+                    itemCount: 1,
+                    total: invoiceData.amountDue,
+                    paymentMethod: 'razorpay'
+                  }
+                }
+              }
+            });
+            
             setIsProcessing(false);
           };
           document.body.appendChild(script);
@@ -73,7 +88,24 @@ const Payment = () => {
       }
     } catch (error) {
       console.error('Payment order creation failed:', error);
-      showError(error.response?.data?.error || 'Failed to create payment order. Please try again.');
+      
+      // Navigate to order error page for payment order creation failure
+      navigate('/order-error', {
+        state: {
+          errorData: {
+            type: error.response?.status === 400 ? 'validation_error' : 
+                  error.code === 'NETWORK_ERROR' ? 'network_error' : 'server_error',
+            message: error.response?.data?.error || 'Failed to create payment order. Please try again.',
+            details: error.response?.data?.details || error.code,
+            orderSummary: {
+              itemCount: 1, // Single invoice payment
+              total: invoiceData.amountDue,
+              paymentMethod: 'razorpay'
+            }
+          }
+        }
+      });
+      
       setIsProcessing(false);
     }
   };
@@ -98,6 +130,11 @@ const Payment = () => {
           );
 
           if (verificationResult.success) {
+            showInfo('Payment verified successfully. Updating order and invoice status...');
+            
+            // Update order and invoice status after successful payment
+            await updatePaymentStatus(invoiceData, verificationResult);
+            
             showSuccess('Payment completed successfully!');
             
             // Navigate back to invoices with success state
@@ -112,11 +149,40 @@ const Payment = () => {
               }
             });
           } else {
-            showError('Payment verification failed. Please contact support.');
+            // Navigate to order error page for payment verification failure
+            navigate('/order-error', {
+              state: {
+                errorData: {
+                  type: 'payment_failed',
+                  message: 'Payment verification failed. Please contact support.',
+                  details: 'PAYMENT_VERIFICATION_FAILED',
+                  orderSummary: {
+                    itemCount: 1,
+                    total: invoiceData.amountDue,
+                    paymentMethod: 'razorpay'
+                  }
+                }
+              }
+            });
           }
         } catch (error) {
           console.error('Payment verification failed:', error);
-          showError('Payment verification failed. Please contact support.');
+          
+          // Navigate to order error page for payment verification failure
+          navigate('/order-error', {
+            state: {
+              errorData: {
+                type: 'payment_failed',
+                message: 'Payment verification failed. Please contact support.',
+                details: error.response?.data?.details || 'PAYMENT_VERIFICATION_ERROR',
+                orderSummary: {
+                  itemCount: 1,
+                  total: invoiceData.amountDue,
+                  paymentMethod: 'razorpay'
+                }
+              }
+            }
+          });
         } finally {
           setIsProcessing(false);
         }
@@ -143,7 +209,22 @@ const Payment = () => {
       },
       modal: {
         ondismiss: function() {
-          showError('Payment cancelled by user.');
+          // Navigate to order error page for payment cancellation
+          navigate('/order-error', {
+            state: {
+              errorData: {
+                type: 'payment_failed',
+                message: 'Payment was cancelled. You can try again anytime.',
+                details: 'PAYMENT_CANCELLED_BY_USER',
+                orderSummary: {
+                  itemCount: 1,
+                  total: invoiceData.amountDue,
+                  paymentMethod: 'razorpay'
+                }
+              }
+            }
+          });
+          
           setIsProcessing(false);
         }
       }
@@ -155,6 +236,43 @@ const Payment = () => {
 
   const handleCancel = () => {
     navigate('/my-account', { state: { activeSection: 'invoices' } });
+  };
+
+  const updatePaymentStatus = async (invoiceData, verificationResult) => {
+    try {
+      // Extract order ID from invoice data
+      // The invoice data should have an 'order' field from the CustomerInvoiceSerializer
+      const orderId = invoiceData.order || invoiceData.orderId || invoiceData.order_id || invoiceData.sale_order;
+      const invoiceId = parseInt(invoiceData.id.replace('INV/', '')); // Extract numeric ID from invoice number
+      
+      // Update order status to confirmed (if not already confirmed)
+      if (orderId) {
+        try {
+          await ordersAPI.confirmOrder(orderId);
+          console.log('Order status updated to confirmed');
+        } catch (orderError) {
+          // Order might already be confirmed, log but don't fail the payment process
+          console.warn('Order confirmation failed (might already be confirmed):', orderError);
+        }
+      }
+      
+      // Update invoice status to confirmed (if not already confirmed)
+      try {
+        await invoicesAPI.confirmInvoice(invoiceId);
+        console.log('Invoice status updated to confirmed');
+      } catch (invoiceError) {
+        // Invoice might already be confirmed, log but don't fail the payment process
+        console.warn('Invoice confirmation failed (might already be confirmed):', invoiceError);
+      }
+      
+      // Payment transaction recording is already handled by the verifyPayment API
+      console.log('Payment transaction recorded successfully');
+      
+    } catch (error) {
+      // Log error but don't fail the payment process since payment verification succeeded
+      console.error('Error updating payment status:', error);
+      showError('Payment successful but there was an issue updating order/invoice status. Please contact support if needed.');
+    }
   };
 
   if (!invoiceData) {

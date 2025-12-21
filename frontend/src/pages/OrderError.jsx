@@ -12,8 +12,21 @@ const OrderError = () => {
     if (location.state && location.state.errorData) {
       setErrorData(location.state.errorData);
     } else {
-      // If no error data, redirect to cart
-      navigate('/cart');
+      // Check URL params for error type
+      const urlParams = new URLSearchParams(window.location.search);
+      const errorType = urlParams.get('type');
+      const errorMessage = urlParams.get('message');
+      
+      if (errorType) {
+        setErrorData({
+          type: errorType,
+          message: errorMessage || 'An error occurred while processing your request.',
+          details: 'URL_PARAMS_ERROR'
+        });
+      } else {
+        // If no error data, redirect to cart
+        navigate('/cart');
+      }
     }
   }, [location.state, navigate]);
 

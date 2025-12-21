@@ -10,7 +10,17 @@ const OrderConfirmation = () => {
   useEffect(() => {
     // Redirect if no order data
     if (!order) {
-      navigate('/cart');
+      // Try to get order data from URL params if available
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderId = urlParams.get('orderId');
+      
+      if (orderId) {
+        // Could fetch order data here if needed
+        console.log('Order ID from URL:', orderId);
+      } else {
+        // No order data available, redirect to cart
+        navigate('/cart');
+      }
     }
   }, [order, navigate]);
 

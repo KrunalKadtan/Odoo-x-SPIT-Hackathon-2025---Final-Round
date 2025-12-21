@@ -26,6 +26,18 @@ const Button = ({
     outline: `
       border border-app-border text-app-main hover:bg-app-secondary
       focus:ring-app-border
+    `,
+    warning: `
+      bg-yellow-500 text-white hover:bg-yellow-600
+      focus:ring-yellow-500/50
+    `,
+    error: `
+      bg-red-500 text-white hover:bg-red-600
+      focus:ring-red-500/50
+    `,
+    success: `
+      bg-green-500 text-white hover:bg-green-600
+      focus:ring-green-500/50
     `
   };
 

@@ -7,7 +7,18 @@ import { tokenUtils, userAPI, ordersAPI, paymentsAPI } from '../utils/api';
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { cart, loading, updateQuantity, removeFromCart, clearCart, loadCart } = useCart();
+  const { 
+    cart, 
+    loading, 
+    error,
+    updateQuantity, 
+    removeFromCart, 
+    clearCart, 
+    loadCart,
+    getCartSubtotal,
+    getCartTaxAmount,
+    getCartTotalWithTax
+  } = useCart();
   const { showSuccess, showError, showInfo } = useNotification();
   
   const [currentStep, setCurrentStep] = useState('order'); // order, address, payment
@@ -50,27 +61,35 @@ const Cart = () => {
   };
 
   const handleQuantityUpdate = async (itemId, newQuantity) => {
+    if (newQuantity < 1) return;
+    
     try {
       await updateQuantity(itemId, newQuantity);
+      showSuccess('Quantity updated successfully');
     } catch (error) {
-      showError(error.response?.data?.error || 'Failed to update quantity');
+      showError(error.message || 'Failed to update quantity');
     }
   };
 
   const handleRemoveItem = async (itemId) => {
     try {
       await removeFromCart(itemId);
+      showSuccess('Item removed from cart');
     } catch (error) {
-      showError(error.response?.data?.error || 'Failed to remove item');
+      showError(error.message || 'Failed to remove item');
     }
   };
 
   const handleClearCart = async () => {
+    if (!window.confirm('Are you sure you want to clear your cart?')) {
+      return;
+    }
+    
     try {
       await clearCart();
       showSuccess('Cart cleared successfully');
     } catch (error) {
-      showError(error.response?.data?.error || 'Failed to clear cart');
+      showError(error.message || 'Failed to clear cart');
     }
   };
 
@@ -158,7 +177,25 @@ const Cart = () => {
       }
     } catch (error) {
       console.error('Error creating order:', error);
-      showError(error.response?.data?.error || 'Failed to create order. Please try again.');
+      
+      // Navigate to order error page with error details
+      navigate('/order-error', {
+        state: {
+          errorData: {
+            type: error.response?.status === 400 ? 'validation_error' : 
+                  error.response?.status === 409 ? 'inventory_error' :
+                  error.code === 'NETWORK_ERROR' ? 'network_error' : 'server_error',
+            message: error.response?.data?.error || 'Failed to create order. Please try again.',
+            details: error.response?.data?.details || error.code,
+            orderSummary: {
+              itemCount: cart.length,
+              total: getCartTotalWithTax(),
+              paymentMethod: paymentMethod
+            }
+          }
+        }
+      });
+      
       setIsProcessing(false);
     }
   };
@@ -170,7 +207,22 @@ const Cart = () => {
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.onload = () => initiateRazorpayPayment(orderData, orderDetails);
       script.onerror = () => {
-        showError('Failed to load Razorpay payment gateway. Please try again.');
+        // Navigate to order error page for payment gateway loading failure
+        navigate('/order-error', {
+          state: {
+            errorData: {
+              type: 'payment_failed',
+              message: 'Failed to load Razorpay payment gateway. Please try again.',
+              details: 'RAZORPAY_SCRIPT_LOAD_FAILED',
+              orderSummary: {
+                itemCount: cart.length,
+                total: getCartTotalWithTax(),
+                paymentMethod: 'razorpay'
+              }
+            }
+          }
+        });
+        
         setIsProcessing(false);
       };
       document.body.appendChild(script);
@@ -217,7 +269,23 @@ const Cart = () => {
           }
         } catch (error) {
           console.error('Payment verification error:', error);
-          showError('Payment verification failed. Please contact support.');
+          
+          // Navigate to order error page for payment verification failure
+          navigate('/order-error', {
+            state: {
+              errorData: {
+                type: 'payment_failed',
+                message: 'Payment verification failed. Please contact support.',
+                details: error.response?.data?.details || 'PAYMENT_VERIFICATION_FAILED',
+                orderSummary: {
+                  itemCount: cart.length,
+                  total: getCartTotalWithTax(),
+                  paymentMethod: 'razorpay'
+                }
+              }
+            }
+          });
+          
           setIsProcessing(false);
         }
       },
@@ -259,6 +327,29 @@ const Cart = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span className="text-app-muted">Loading cart...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-app-primary">
+        <Navigation />
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <svg className="w-12 h-12 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className="text-lg font-medium text-app-main mb-2">Error Loading Cart</h3>
+            <p className="text-app-muted mb-4">{error}</p>
+            <button
+              onClick={() => loadCart()}
+              className="bg-app-accent text-white px-4 py-2 rounded-pro font-sans text-sm hover:bg-app-accent/90 transition-colors"
+            >
+              Try Again
+            </button>
           </div>
         </div>
       </div>
@@ -597,16 +688,16 @@ const Cart = () => {
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between">
                     <span className="text-app-main font-sans">Subtotal:</span>
-                    <span className="text-app-main font-mono">₹{cart?.total || 0}</span>
+                    <span className="text-app-main font-mono">₹{getCartSubtotal()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-app-main font-sans">Taxes:</span>
-                    <span className="text-app-main font-mono">₹{Math.round((cart?.total || 0) * 0.1)}</span>
+                    <span className="text-app-main font-mono">₹{getCartTaxAmount()}</span>
                   </div>
                   <hr className="border-app-border" />
                   <div className="flex justify-between font-medium text-lg">
                     <span className="text-app-main font-sans">Total:</span>
-                    <span className="text-app-accent font-mono">₹{Math.round((cart?.total || 0) * 1.1)}</span>
+                    <span className="text-app-accent font-mono">₹{getCartTotalWithTax()}</span>
                   </div>
                 </div>
 

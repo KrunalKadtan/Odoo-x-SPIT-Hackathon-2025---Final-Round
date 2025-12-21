@@ -7,7 +7,7 @@ import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
 
 const ProductDetail = () => {
-  const { category, productId } = useParams();
+  const { category, productId, id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { showSuccess, showError } = useNotification();
@@ -19,9 +19,12 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Get the actual product ID from either route pattern
+  const actualProductId = productId || id;
+
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!productId) {
+      if (!actualProductId) {
         navigate('/shop');
         return;
       }
@@ -30,7 +33,7 @@ const ProductDetail = () => {
       setError(null);
 
       try {
-        const response = await productsAPI.getProduct(productId);
+        const response = await productsAPI.getProduct(actualProductId);
         
         // Transform backend data to frontend format
         const transformedProduct = {
@@ -78,7 +81,7 @@ const ProductDetail = () => {
     };
 
     fetchProduct();
-  }, [productId, navigate]);
+  }, [actualProductId, navigate]);
 
   // Helper function to get color hex values
   const getColorValue = (colorName) => {

@@ -1,69 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { cartAPI, ordersAPI } from '../utils/api';
+import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
+import { ordersAPI } from '../utils/api';
 
 const Cart = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { showSuccess, showError, showInfo } = useNotification();
-  const [cart, setCart] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const { 
+    cart, 
+    loading, 
+    error,
+    updateQuantity, 
+    removeFromCart, 
+    clearCart, 
+    loadCart,
+    getCartTotal,
+    getCartItemsCount
+  } = useCart();
   const [checkingOut, setCheckingOut] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !cart) {
       loadCart();
     }
-  }, [isOpen]);
+  }, [isOpen, cart, loadCart]);
 
-  const loadCart = async () => {
-    setLoading(true);
+  const handleUpdateQuantity = async (itemId, newQuantity) => {
+    if (newQuantity < 1) return;
+    
     try {
-      const cartData = await cartAPI.getCart();
-      setCart(cartData);
+      await updateQuantity(itemId, newQuantity);
+      showSuccess('Quantity updated');
     } catch (error) {
-      console.error('Error loading cart:', error);
-      showError('Failed to load cart');
-    } finally {
-      setLoading(false);
+      showError(error.message || 'Failed to update quantity');
     }
   };
 
-  const updateQuantity = async (itemId, newQuantity) => {
-    if (newQuantity <= 0) {
-      await removeItem(itemId);
-      return;
-    }
-
+  const handleRemoveItem = async (itemId) => {
     try {
-      const response = await cartAPI.updateCartItem(itemId, newQuantity);
-      setCart(response.cart);
-      showSuccess(response.message);
+      await removeFromCart(itemId);
+      showSuccess('Item removed');
     } catch (error) {
-      console.error('Error updating quantity:', error);
-      showError(error.response?.data?.error || 'Failed to update quantity');
+      showError(error.message || 'Failed to remove item');
     }
   };
 
-  const removeItem = async (itemId) => {
+  const handleClearCart = async () => {
+    if (!window.confirm('Clear all items from cart?')) return;
+    
     try {
-      const response = await cartAPI.removeFromCart(itemId);
-      setCart(response.cart);
-      showSuccess(response.message);
+      await clearCart();
+      showSuccess('Cart cleared');
     } catch (error) {
-      console.error('Error removing item:', error);
-      showError(error.response?.data?.error || 'Failed to remove item');
-    }
-  };
-
-  const clearCart = async () => {
-    try {
-      const response = await cartAPI.clearCart();
-      setCart(response.cart);
-      showSuccess(response.message);
-    } catch (error) {
-      console.error('Error clearing cart:', error);
-      showError(error.response?.data?.error || 'Failed to clear cart');
+      showError(error.message || 'Failed to clear cart');
     }
   };
 
@@ -79,7 +69,6 @@ const Cart = ({ isOpen, onClose }) => {
       const response = await ordersAPI.checkout();
       
       showSuccess('Order created successfully!');
-      setCart({ ...cart, items: [], total: 0, item_count: 0 });
       onClose();
       
       // Navigate to order confirmation or my account
@@ -139,6 +128,19 @@ const Cart = ({ isOpen, onClose }) => {
                   <span className="text-app-muted">Loading cart...</span>
                 </div>
               </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center h-32 text-center p-4">
+                <svg className="w-12 h-12 text-red-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-app-muted text-sm">{error}</p>
+                <button
+                  onClick={() => loadCart()}
+                  className="mt-2 text-app-accent text-sm hover:underline"
+                >
+                  Try again
+                </button>
+              </div>
             ) : !cart || cart.items.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center p-4">
                 <svg className="w-16 h-16 text-app-muted mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,7 +180,7 @@ const Cart = ({ isOpen, onClose }) => {
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                         className="w-8 h-8 flex items-center justify-center rounded border border-app-border text-app-main hover:bg-app-secondary transition-colors"
                       >
                         -
@@ -187,13 +189,13 @@ const Cart = ({ isOpen, onClose }) => {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                         className="w-8 h-8 flex items-center justify-center rounded border border-app-border text-app-main hover:bg-app-secondary transition-colors"
                       >
                         +
                       </button>
                       <button
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => handleRemoveItem(item.id)}
                         className="w-8 h-8 flex items-center justify-center rounded text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,7 +208,7 @@ const Cart = ({ isOpen, onClose }) => {
                 
                 {cart.items.length > 1 && (
                   <button
-                    onClick={clearCart}
+                    onClick={handleClearCart}
                     className="w-full text-center text-red-600 hover:text-red-700 text-sm font-sans py-2 transition-colors"
                   >
                     Clear Cart
@@ -222,7 +224,7 @@ const Cart = ({ isOpen, onClose }) => {
               <div className="flex justify-between items-center">
                 <span className="font-sans font-medium text-app-main">Total:</span>
                 <span className="font-mono text-lg font-medium text-app-accent">
-                  ₹{cart.total}
+                  ₹{getCartTotal()}
                 </span>
               </div>
               <button
@@ -242,7 +244,7 @@ const Cart = ({ isOpen, onClose }) => {
                     <span>Processing...</span>
                   </div>
                 ) : (
-                  `Checkout (${cart.item_count} items)`
+                  `Checkout (${getCartItemsCount()} items)`
                 )}
               </button>
             </div>

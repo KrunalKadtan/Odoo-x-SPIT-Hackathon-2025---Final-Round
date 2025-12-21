@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { tokenUtils } from '../utils/api';
 import { useCart } from '../context/CartContext';
+import { adminUtils } from '../utils/adminUtils';
 
 const Navigation = () => {
   const navigate = useNavigate();
   const { getCartItemsCount } = useCart();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userName, setUserName] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -18,6 +20,10 @@ const Navigation = () => {
       setIsAuthenticated(authenticated);
       
       if (authenticated) {
+        // Check if user is admin
+        const adminStatus = adminUtils.isAdmin();
+        setIsAdmin(adminStatus);
+        
         // Get user data from localStorage (stored during signup/signin)
         const userData = localStorage.getItem('user_data');
         if (userData) {
@@ -31,6 +37,8 @@ const Navigation = () => {
         } else {
           setUserName('User');
         }
+      } else {
+        setIsAdmin(false);
       }
     };
 
@@ -62,6 +70,7 @@ const Navigation = () => {
     tokenUtils.clearTokens();
     localStorage.removeItem('user_data');
     setIsAuthenticated(false);
+    setIsAdmin(false);
     setUserName('');
     setShowDropdown(false);
     navigate('/');
@@ -113,6 +122,14 @@ const Navigation = () => {
                     My Account
                   </Link>
                 )}
+                {isAuthenticated && isAdmin && (
+                  <Link
+                    to="/admin/dashboard"
+                    className="text-app-main hover:text-app-accent font-sans font-medium transition-colors duration-200"
+                  >
+                    Admin Dashboard
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -152,6 +169,15 @@ const Navigation = () => {
                 {showDropdown && (
                   <div className="absolute right-0 mt-2 w-48 bg-app-surface rounded-pro shadow-lg border border-app-border z-50">
                     <div className="py-1">
+                      {isAdmin && (
+                        <Link
+                          to="/admin/dashboard"
+                          onClick={() => setShowDropdown(false)}
+                          className="block px-4 py-2 text-sm text-app-main hover:bg-app-secondary transition-colors duration-200"
+                        >
+                          Admin Dashboard
+                        </Link>
+                      )}
                       <button
                         onClick={handleSignOut}
                         className="block w-full text-left px-4 py-2 text-sm text-app-main hover:bg-app-secondary transition-colors duration-200"

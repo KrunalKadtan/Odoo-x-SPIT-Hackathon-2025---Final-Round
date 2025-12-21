@@ -169,21 +169,29 @@ class AdminDashboardViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def recent_activity(self, request):
         """Get recent system activity"""
+        # Get pagination parameters
+        limit = int(request.query_params.get('limit', 10))
+        page = int(request.query_params.get('page', 1))
+        
+        # Calculate offset
+        offset = (page - 1) * limit
+        
         # Recent user registrations
         recent_users = User.objects.filter(
             created_at__gte=timezone.now() - timedelta(days=7)
-        ).order_by('-created_at')[:10]
+        ).order_by('-created_at')[:50]  # Get more to mix with orders
         
         # Recent orders
         recent_orders = SaleOrder.objects.filter(
             created_at__gte=timezone.now() - timedelta(days=7)
-        ).select_related('customer').order_by('-created_at')[:10]
+        ).select_related('customer').order_by('-created_at')[:50]  # Get more to mix with users
         
         activities = []
         
         # Add user activities
         for user in recent_users:
             activities.append({
+                'id': f'user_{user.id}',
                 'type': 'user_registration',
                 'description': f'New user registered: {user.name}',
                 'timestamp': user.created_at,
@@ -194,6 +202,7 @@ class AdminDashboardViewSet(viewsets.ViewSet):
         # Add order activities
         for order in recent_orders:
             activities.append({
+                'id': f'order_{order.id}',
                 'type': 'order_created',
                 'description': f'New order #{order.id} by {order.customer.name}',
                 'timestamp': order.created_at,
@@ -204,7 +213,20 @@ class AdminDashboardViewSet(viewsets.ViewSet):
         # Sort by timestamp
         activities.sort(key=lambda x: x['timestamp'], reverse=True)
         
-        return Response(activities[:20])  # Return top 20 activities
+        # Apply pagination
+        total_activities = len(activities)
+        paginated_activities = activities[offset:offset + limit]
+        
+        return Response({
+            'activities': paginated_activities,
+            'pagination': {
+                'page': page,
+                'limit': limit,
+                'total': total_activities,
+                'has_next': offset + limit < total_activities,
+                'has_previous': page > 1
+            }
+        })
 
 
 class AdminAnalyticsViewSet(viewsets.ViewSet):
@@ -345,3 +367,123 @@ class AdminSystemViewSet(viewsets.ViewSet):
         recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
         
         return Response(recent_activities[:100])
+    
+    @action(detail=False, methods=['post'], url_path='security-events')
+    def create_security_event(self, request):
+        """Create a security event log"""
+        event_data = request.data
+        
+        # Basic validation
+        required_fields = ['event_type', 'severity', 'description']
+        for field in required_fields:
+            if field not in event_data:
+                return Response(
+                    {'error': f'Missing required field: {field}'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # For now, just log to console and return success
+        # In production, this would save to a security events table
+        import logging
+        logger = logging.getLogger('security')
+        
+        log_entry = {
+            'timestamp': timezone.now().isoformat(),
+            'event_type': event_data.get('event_type'),
+            'severity': event_data.get('severity'),
+            'description': event_data.get('description'),
+            'user_id': event_data.get('user_id'),
+            'ip_address': request.META.get('REMOTE_ADDR'),
+            'user_agent': request.META.get('HTTP_USER_AGENT'),
+            'additional_data': event_data.get('additional_data', {})
+        }
+        
+        logger.info(f"Security Event: {log_entry}")
+        
+        return Response({
+            'message': 'Security event logged successfully',
+            'event_id': f"sec_{timezone.now().timestamp()}"
+        })
+    
+    @action(detail=False, methods=['get'], url_path='security-events')
+    def get_security_events(self, request):
+        """Get security events (placeholder)"""
+        # This would typically query a security events table
+        # For now, return mock data
+        
+        mock_events = [
+            {
+                'id': 1,
+                'timestamp': timezone.now() - timedelta(hours=1),
+                'event_type': 'LOGIN_ATTEMPT',
+                'severity': 'INFO',
+                'description': 'Successful login',
+                'user_id': request.user.id if request.user.is_authenticated else None,
+                'ip_address': request.META.get('REMOTE_ADDR', '127.0.0.1')
+            },
+            {
+                'id': 2,
+                'timestamp': timezone.now() - timedelta(hours=2),
+                'event_type': 'FAILED_LOGIN',
+                'severity': 'WARNING',
+                'description': 'Failed login attempt',
+                'user_id': None,
+                'ip_address': '192.168.1.100'
+            }
+        ]
+        
+        return Response(mock_events)
+    
+    @action(detail=False, methods=['get'], url_path='security-alerts')
+    def get_security_alerts(self, request):
+        """Get security alerts (placeholder)"""
+        # This would typically query a security alerts table
+        # For now, return mock data
+        
+        mock_alerts = [
+            {
+                'id': 1,
+                'timestamp': timezone.now() - timedelta(minutes=30),
+                'alert_type': 'MULTIPLE_FAILED_LOGINS',
+                'severity': 'HIGH',
+                'description': 'Multiple failed login attempts detected',
+                'status': 'ACTIVE',
+                'affected_resource': 'Login System'
+            }
+        ]
+        
+        return Response(mock_alerts)
+    
+    @action(detail=False, methods=['post'], url_path='security-alerts')
+    def create_security_alert(self, request):
+        """Create a security alert"""
+        alert_data = request.data
+        
+        # Basic validation
+        required_fields = ['alert_type', 'severity', 'description']
+        for field in required_fields:
+            if field not in alert_data:
+                return Response(
+                    {'error': f'Missing required field: {field}'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # For now, just log and return success
+        import logging
+        logger = logging.getLogger('security')
+        
+        alert_entry = {
+            'timestamp': timezone.now().isoformat(),
+            'alert_type': alert_data.get('alert_type'),
+            'severity': alert_data.get('severity'),
+            'description': alert_data.get('description'),
+            'status': 'ACTIVE',
+            'created_by': request.user.id if request.user.is_authenticated else None
+        }
+        
+        logger.warning(f"Security Alert: {alert_entry}")
+        
+        return Response({
+            'message': 'Security alert created successfully',
+            'alert_id': f"alert_{timezone.now().timestamp()}"
+        })
