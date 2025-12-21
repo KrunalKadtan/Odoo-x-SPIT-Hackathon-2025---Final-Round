@@ -27,10 +27,13 @@ def test_razorpay_integration():
     try:
         # 1. Test authentication
         print("1. Testing authentication...")
-        auth_response = requests.post(f"{base_url}/token/", {
-            "email": email,
-            "password": password
-        })
+        auth_response = requests.post(f"{base_url}/token/", 
+            headers={'Content-Type': 'application/json'},
+            json={
+                "email": email,
+                "password": password
+            }
+        )
         
         if auth_response.status_code == 200:
             token_data = auth_response.json()
@@ -155,4 +158,4 @@ def test_razorpay_integration():
         print(f"❌ Unexpected error: {str(e)}")
 
 if __name__ == "__main__":
-    test_razorpay_connection()
+    test_razorpay_integration()

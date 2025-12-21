@@ -43,6 +43,7 @@ vendor_router.register(r'me', views_vendor.VendorSelfViewSet, basename='vendor-s
 urlpatterns = [
     # Admin URLs
     path('admin/', include(admin_router.urls)),
+    path('admin/', include('accounts.admin_urls')),
     
     # Vendor URLs
     path('vendor/', include(vendor_router.urls)),

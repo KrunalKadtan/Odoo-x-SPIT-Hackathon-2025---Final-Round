@@ -11,6 +11,39 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    """Serializer for User profile with additional computed fields."""
+    
+    full_name = serializers.CharField(source='name', read_only=True)
+    first_name = serializers.SerializerMethodField()
+    last_name = serializers.SerializerMethodField()
+    phone = serializers.CharField(source='mobile', read_only=True)
+    phone_number = serializers.CharField(source='mobile', read_only=True)
+    postal_code = serializers.CharField(source='pincode', read_only=True)
+    zip_code = serializers.CharField(source='pincode', read_only=True)
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'email', 'name', 'role', 'mobile', 'address', 'city', 'state', 'pincode', 'created_at',
+            'full_name', 'first_name', 'last_name', 'phone', 'phone_number', 'postal_code', 'zip_code'
+        ]
+        read_only_fields = ['id', 'created_at']
+    
+    def get_first_name(self, obj):
+        """Extract first name from full name."""
+        if obj.name:
+            return obj.name.split()[0]
+        return ""
+    
+    def get_last_name(self, obj):
+        """Extract last name from full name."""
+        if obj.name:
+            parts = obj.name.split()
+            return " ".join(parts[1:]) if len(parts) > 1 else ""
+        return ""
+
+
 class ContactSerializer(serializers.ModelSerializer):
     """Serializer for Contact model."""
     
