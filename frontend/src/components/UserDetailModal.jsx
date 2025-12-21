@@ -86,7 +86,7 @@ const UserDetailModal = ({
             <div>
               <label className="block text-sm font-medium text-app-muted">Full Name</label>
               <p className="mt-1 text-sm text-app-main">
-                {`${details.first_name || ''} ${details.last_name || ''}`.trim() || 'N/A'}
+                {details.name || 'N/A'}
               </p>
             </div>
             <div>

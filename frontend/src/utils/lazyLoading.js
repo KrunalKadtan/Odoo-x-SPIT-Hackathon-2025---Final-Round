@@ -175,26 +175,38 @@ export const measurePerformance = () => {
           largestContentfulPaint: 0, // Would need to be measured separately
           
           // Navigation timing
-          domContentLoaded: perfData.domContentLoadedEventEnd - perfData.domContentLoadedEventStart,
-          pageLoad: perfData.loadEventEnd - perfData.loadEventStart,
+          domContentLoaded: (perfData.domContentLoadedEventEnd && perfData.domContentLoadedEventStart) 
+            ? perfData.domContentLoadedEventEnd - perfData.domContentLoadedEventStart : 0,
+          pageLoad: (perfData.loadEventEnd && perfData.loadEventStart) 
+            ? perfData.loadEventEnd - perfData.loadEventStart : 0,
           
           // Network timing
-          dnsLookup: perfData.domainLookupEnd - perfData.domainLookupStart,
-          tcpConnection: perfData.connectEnd - perfData.connectStart,
-          serverResponse: perfData.responseEnd - perfData.requestStart,
+          dnsLookup: (perfData.domainLookupEnd && perfData.domainLookupStart) 
+            ? perfData.domainLookupEnd - perfData.domainLookupStart : 0,
+          tcpConnection: (perfData.connectEnd && perfData.connectStart) 
+            ? perfData.connectEnd - perfData.connectStart : 0,
+          serverResponse: (perfData.responseEnd && perfData.requestStart) 
+            ? perfData.responseEnd - perfData.requestStart : 0,
           
           // Resource timing
-          totalLoadTime: perfData.loadEventEnd - perfData.navigationStart,
-          timeToInteractive: perfData.domInteractive - perfData.navigationStart
+          totalLoadTime: (perfData.loadEventEnd && perfData.navigationStart) 
+            ? perfData.loadEventEnd - perfData.navigationStart : 0,
+          timeToInteractive: (perfData.domInteractive && perfData.navigationStart) 
+            ? perfData.domInteractive - perfData.navigationStart : 0
+        };
+
+        // Helper function to safely format numbers
+        const formatMetric = (value) => {
+          return (typeof value === 'number' && !isNaN(value)) ? value.toFixed(2) : '0.00';
         };
 
         // Log performance metrics (in production, send to analytics)
         console.group('🚀 Performance Metrics');
-        console.log('First Contentful Paint:', metrics.firstContentfulPaint.toFixed(2), 'ms');
-        console.log('DOM Content Loaded:', metrics.domContentLoaded.toFixed(2), 'ms');
-        console.log('Page Load Time:', metrics.pageLoad.toFixed(2), 'ms');
-        console.log('Total Load Time:', metrics.totalLoadTime.toFixed(2), 'ms');
-        console.log('Time to Interactive:', metrics.timeToInteractive.toFixed(2), 'ms');
+        console.log('First Contentful Paint:', formatMetric(metrics.firstContentfulPaint), 'ms');
+        console.log('DOM Content Loaded:', formatMetric(metrics.domContentLoaded), 'ms');
+        console.log('Page Load Time:', formatMetric(metrics.pageLoad), 'ms');
+        console.log('Total Load Time:', formatMetric(metrics.totalLoadTime), 'ms');
+        console.log('Time to Interactive:', formatMetric(metrics.timeToInteractive), 'ms');
         console.groupEnd();
 
         // Store metrics for potential analytics reporting

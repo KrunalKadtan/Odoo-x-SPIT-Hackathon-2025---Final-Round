@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
+from django.db import models
 
 from .models import Product, PurchaseOrder, PurchaseOrderLine, VendorBill, Payment
 from accounts.models import Contact
@@ -73,6 +74,120 @@ class AdminProductViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(product)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """
+        Approve a product for publication.
+        
+        Request body:
+        {
+            "notes": "Optional approval notes"
+        }
+        """
+        product = self.get_object()
+        notes = request.data.get('notes', '')
+        
+        product.published = True
+        product.save()
+        
+        # TODO: Send notification to vendor about approval
+        # This would typically create a notification record
+        
+        return Response({
+            'message': f'Product "{product.product_name}" approved successfully',
+            'product_id': product.id,
+            'published': product.published,
+            'notes': notes
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """
+        Reject a product and unpublish it.
+        
+        Request body:
+        {
+            "reason": "Reason for rejection",
+            "notes": "Optional additional notes"
+        }
+        """
+        product = self.get_object()
+        reason = request.data.get('reason', '')
+        notes = request.data.get('notes', '')
+        
+        if not reason:
+            return Response(
+                {'error': 'reason is required for product rejection'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        product.published = False
+        product.save()
+        
+        # TODO: Send notification to vendor about rejection
+        # This would typically create a notification record with reason
+        
+        return Response({
+            'message': f'Product "{product.product_name}" rejected',
+            'product_id': product.id,
+            'published': product.published,
+            'reason': reason,
+            'notes': notes
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'])
+    def pending_moderation(self, request):
+        """
+        Get products pending moderation (unpublished products).
+        """
+        pending_products = Product.objects.filter(published=False)
+        
+        # Apply search and filtering
+        search = request.query_params.get('search', '')
+        if search:
+            pending_products = pending_products.filter(
+                models.Q(product_name__icontains=search) |
+                models.Q(product_category__icontains=search) |
+                models.Q(material__icontains=search)
+            )
+        
+        category = request.query_params.get('category', '')
+        if category:
+            pending_products = pending_products.filter(product_category=category)
+        
+        # Paginate results
+        page = self.paginate_queryset(pending_products)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(pending_products, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def moderation_stats(self, request):
+        """
+        Get product moderation statistics.
+        """
+        from django.db.models import Count
+        
+        stats = {
+            'total_products': Product.objects.count(),
+            'published_products': Product.objects.filter(published=True).count(),
+            'pending_moderation': Product.objects.filter(published=False).count(),
+            'by_category': list(
+                Product.objects.values('product_category')
+                .annotate(
+                    total=Count('id'),
+                    published=Count('id', filter=models.Q(published=True)),
+                    pending=Count('id', filter=models.Q(published=False))
+                )
+                .order_by('product_category')
+            )
+        }
+        
+        return Response(stats, status=status.HTTP_200_OK)
     
     @action(detail=True, methods=['get'])
     def stock(self, request, pk=None):

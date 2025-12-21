@@ -26,6 +26,11 @@ const AdminDashboard = () => {
   } = useAdminDashboard();
   const navigate = useNavigate();
 
+  // Debug logging
+  console.log('AdminDashboard - metrics:', metrics);
+  console.log('AdminDashboard - loading:', loading);
+  console.log('AdminDashboard - error:', error);
+
   // Progressive loading for dashboard components
   const dashboardComponents = [
     'metrics',
@@ -41,17 +46,19 @@ const AdminDashboard = () => {
 
   // Format currency values
   const formatCurrency = (value) => {
+    const numValue = Number(value) || 0;
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(value);
+    }).format(numValue);
   };
 
   // Format numbers with commas
   const formatNumber = (value) => {
-    return new Intl.NumberFormat('en-IN').format(value);
+    const numValue = Number(value) || 0;
+    return new Intl.NumberFormat('en-IN').format(numValue);
   };
 
   // Handle metric card clicks for navigation

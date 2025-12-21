@@ -118,14 +118,14 @@ class AdminDashboardViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def metrics(self, request):
         """Get dashboard metrics"""
-        # User metrics
+        # User metrics - fix role names to match User model
         total_users = User.objects.count()
-        total_customers = User.objects.filter(role='customer').count()
+        total_customers = User.objects.filter(role='portal').count()  # portal users are customers
         total_vendors = User.objects.filter(role='vendor').count()
         
         # Order metrics
         total_orders = SaleOrder.objects.count()
-        pending_orders = SaleOrder.objects.filter(status='pending').count()
+        pending_orders = SaleOrder.objects.filter(status='draft').count()  # draft is pending
         confirmed_orders = SaleOrder.objects.filter(status='confirmed').count()
         
         # Revenue metrics
@@ -158,7 +158,7 @@ class AdminDashboardViewSet(viewsets.ViewSet):
                 'recent': recent_orders
             },
             'revenue': {
-                'total': total_revenue
+                'total': float(total_revenue)  # Ensure it's a float for JSON serialization
             },
             'products': {
                 'total': total_products,
